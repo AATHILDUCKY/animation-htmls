@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Metal Net vs Floating Balls — 3D Physics Lab</title>
+<script type="importmap">
+{"imports":{"three":"https://cdnjs.cloudflare.com/ajax/libs/three.js/0.185.1/three.module.min.js"}}
+</script>
+<style>
+:root{--gold:#e4b24b;--cyan:#57c7de;--panel:#10151d;--muted:#8794a5;--frame-scale:.85}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#06090e;color:#fff;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;overscroll-behavior:none}
+button,input{font:inherit}
+#app{width:100vw;height:100dvh;display:grid;grid-template-columns:clamp(220px,22vw,300px) minmax(0,1fr);background:#070a10}
+#sidebar{z-index:10;height:100dvh;padding:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom));overflow:auto;background:linear-gradient(180deg,#111720,#080b11);border-right:1px solid #ffffff16;box-shadow:12px 0 48px #0008}
+.brand{margin:2px 2px 15px}.brand-title{font-size:13px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.brand-sub{margin-top:6px;color:#91a0b3;font-size:9px;line-height:1.55}.panel{margin-bottom:10px;padding:11px;border-radius:13px;background:#ffffff09;border:1px solid #ffffff12}.panel-title{margin-bottom:9px;color:#93a0b1;font-size:8px;font-weight:850;letter-spacing:.14em;text-transform:uppercase}.readout{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}.readout b{font-size:19px;letter-spacing:-.03em}.readout span{color:#aab4c2;font-size:8px;text-transform:uppercase}.range{margin-bottom:11px}.range:last-child{margin-bottom:0}input[type=range]{width:100%;height:3px;margin:5px 0 0;accent-color:var(--gold);cursor:pointer}.stats{display:grid;grid-template-columns:1fr auto;gap:6px 8px;font-size:8px}.stats span{color:#8290a2}.stats strong{font-variant-numeric:tabular-nums}.btn{width:100%;min-height:40px;border:0;border-radius:9px;color:#101116;background:linear-gradient(180deg,#f4cf78,#dca83f);font-size:8px;font-weight:900;letter-spacing:.12em;cursor:pointer;box-shadow:0 9px 25px #0005, inset 0 1px #fff7}.btn:active{transform:translateY(1px)}.btn.secondary{margin-top:7px;color:#dce5ef;background:#ffffff0c;border:1px solid #ffffff17;box-shadow:none}.toggle-row{display:flex;gap:5px;margin-top:8px}.chip{flex:1;min-height:30px;border:1px solid #ffffff15;border-radius:8px;color:#91a0b3;background:#ffffff08;font-size:7px;font-weight:800;cursor:pointer}.chip.active{color:#071018;background:var(--cyan);border-color:transparent}.view-row{margin:0 0 10px}.help{color:#7f8b9b;font-size:7px;line-height:1.55}.help strong{color:#dce5ef}.physics-note{padding:9px;border-left:2px solid var(--cyan);background:#57c7de0b;color:#a9bac7;font-size:7px;line-height:1.55}
+.btn.record-btn{margin-top:7px;color:#fff;background:linear-gradient(180deg,#ef665f,#b93232);box-shadow:0 9px 25px #420d1266}.btn.record-btn.recording{animation:recordPulse 1.15s ease-in-out infinite;background:linear-gradient(180deg,#ff5149,#8f1717)}@keyframes recordPulse{50%{box-shadow:0 0 0 5px #ff5b5325,0 10px 28px #0007}}button:disabled,input:disabled{cursor:not-allowed;opacity:.48}
+#viewer{position:relative;display:grid;place-items:center;min-width:0;overflow:hidden;background:radial-gradient(circle at 55% 45%,#162331 0,#080b10 68%)}
+#frame{position:relative;width:min(calc((100dvh - 24px)*16/9*var(--frame-scale)),calc((100% - 24px)*var(--frame-scale)));aspect-ratio:16/9;overflow:hidden;border:1px solid #ffffff1a;border-radius:10px;background:#07101a;box-shadow:0 30px 90px #000b;touch-action:none;transition:width .28s ease,aspect-ratio .28s ease}
+#app[data-view="mobile"] #frame{width:min(calc((100dvh - 24px)*9/16*var(--frame-scale)),calc((100% - 24px)*var(--frame-scale)));aspect-ratio:9/16}
+#frame canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}#frame canvas:active{cursor:grabbing}
+#hud{position:absolute;inset:0;pointer-events:none}.top-hud{position:absolute;top:15px;left:15px;right:15px;display:flex;justify-content:space-between;align-items:flex-start}.badge{padding:7px 9px;border:1px solid #ffffff1e;border-radius:9px;background:#07101ab8;backdrop-filter:blur(9px);font-size:7px;letter-spacing:.1em;text-transform:uppercase}.badge b{display:block;margin-top:4px;color:#fff;font-size:10px;letter-spacing:0}.live{color:#76d9e9}.legend{position:absolute;left:15px;bottom:15px;padding:9px 10px;border-radius:9px;background:#07101abb;border:1px solid #ffffff18;color:#9aabba;font-size:7px;line-height:1.6;backdrop-filter:blur(9px)}.dot{display:inline-block;width:5px;height:5px;margin-right:5px;border-radius:50%}.loading{position:absolute;inset:0;z-index:30;display:grid;place-items:center;background:#07101a;color:#d9e5ed;font-size:9px;font-weight:800;letter-spacing:.15em;transition:opacity .4s}.loading.hide{opacity:0;pointer-events:none}
+@media(max-width:700px){#app{grid-template-columns:150px minmax(0,1fr)}#sidebar{padding:9px 7px}.brand{margin-bottom:9px}.brand-title{font-size:9px}.brand-sub{font-size:6.5px}.panel{padding:7px;margin-bottom:6px;border-radius:9px}.panel-title{font-size:6.5px;margin-bottom:6px}.readout{margin-bottom:3px}.readout b{font-size:15px}.readout span,.stats{font-size:6.3px}.range{margin-bottom:7px}.btn{min-height:32px;font-size:6.3px}.chip{min-height:25px;font-size:6px}.physics-note,.help{font-size:6px}.panel.optional{display:none}}
+@media(max-width:440px){#app{grid-template-columns:122px minmax(0,1fr)}#sidebar{padding:7px 5px}.brand-sub{display:none}.panel{padding:6px}.readout b{font-size:13px}.btn{min-height:30px}#app[data-view="desktop"] #frame{width:min(calc((100dvh - 10px)*16/9*var(--frame-scale)),calc((100% - 8px)*var(--frame-scale)))}#app[data-view="mobile"] #frame{width:min(calc((100dvh - 10px)*9/16*var(--frame-scale)),calc((100% - 8px)*var(--frame-scale)))}#frame{border-radius:7px}.top-hud{top:9px;left:9px;right:9px}.legend{left:9px;bottom:9px}}
+</style>
+</head>
+<body>
+<div id="app" data-view="desktop">
+  <aside id="sidebar">
+    <div class="brand"><div class="brand-title">Buoyancy Lab</div><div class="brand-sub">Deformable metal net × floating spheres</div></div>
+    <section class="panel">
+      <div class="panel-title">Net properties</div>
+      <div class="range"><div class="readout"><span>Net size</span><b id="sizeOut">4.6 m</b></div><input id="size" type="range" min="2.8" max="6.4" step="0.2" value="4.6"></div>
+      <div class="range"><div class="readout"><span>Total weight</span><b id="massOut">10 kg</b></div><input id="mass" type="range" min="2" max="24" step="1" value="10"></div>
+      <div class="range"><div class="readout"><span>Drop height</span><b id="heightOut">3.0 m</b></div><input id="height" type="range" min="1.2" max="5.2" step="0.2" value="3"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-title">Floating field</div>
+      <div class="range"><div class="readout"><span>Ball diameter</span><b id="ballSizeOut">0.72 m</b></div><input id="ballSize" type="range" min="0.48" max="1.0" step="0.04" value="0.72"></div>
+      <div class="range"><div class="readout"><span>Ball count</span><b id="countOut">20</b></div><input id="count" type="range" min="10" max="32" step="2" value="20"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-title">View &amp; size</div>
+      <div class="toggle-row view-row"><button class="chip active" data-view="desktop">DESKTOP 16:9</button><button class="chip" data-view="mobile">MOBILE 9:16</button></div>
+      <div class="range"><div class="readout"><span>Simulation size</span><b id="viewSizeOut">85%</b></div><input id="viewSize" type="range" min="55" max="100" step="5" value="85"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-title">Simulation</div>
+      <button class="btn" id="drop">DROP NET</button>
+      <button class="btn secondary" id="reset">RESET WATER</button>
+      <button class="btn record-btn" id="record">START MP4 RECORDING</button>
+      <div class="toggle-row"><button class="chip active" data-speed="1">REAL TIME</button><button class="chip" data-speed="0.28">SLOW MO</button></div>
+    </section>
+    <section class="panel">
+      <div class="panel-title">Live physics</div>
+      <div class="stats"><span>Net velocity</span><strong id="velocity">0.00 m/s</strong><span>Net weight force</span><strong id="weightForce">98.1 N</strong><span>Net buoyancy</span><strong id="buoyForce">0.0 N</strong><span>Mean submersion</span><strong id="submerge">0%</strong><span>Contact points</span><strong id="contacts">0</strong><span>Recording</span><strong id="recordStatus">Off</strong><span>FPS / quality</span><strong id="fps">—</strong></div>
+    </section>
+    <section class="panel optional"><div class="panel-title">Camera</div><div class="help"><strong>Drag</strong> orbit · <strong>Wheel/pinch</strong> zoom<br><strong>Double-click</strong> reset camera</div></section>
+    <div class="physics-note">Force model: Newton's second law, 9.80665 m/s² gravity, Archimedes buoyancy, quadratic fluid drag, water-dependent restitution, Coulomb friction and tension-only net links.</div>
+  </aside>
+  <main id="viewer"><div id="frame"><div class="loading" id="loading">PREPARING WATER PHYSICS</div><div id="hud"><div class="top-hud"><div class="badge">Experiment<b id="state">Ready to drop</b></div><div class="badge live">● Live physics</div></div><div class="legend"><span class="dot" style="background:#e4b24b"></span>metal net<br><span class="dot" style="background:#57c7de"></span>water line<br><span class="dot" style="background:#ff6d68"></span>floating balls</div></div></div></main>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// SI units. Gravity is the conventional standard at Earth's surface.
+const G=9.80665,RHO_WATER=997,RHO_AIR=1.225,RHO_STEEL=7850,WATER_Y=0,FLOOR_Y=-4.4,FIXED=1/120;
+const app=document.querySelector('#app'),frame=document.querySelector('#frame'),loading=document.querySelector('#loading');
+const ui={size:$('#size'),mass:$('#mass'),height:$('#height'),ballSize:$('#ballSize'),count:$('#count'),viewSize:$('#viewSize'),sizeOut:$('#sizeOut'),massOut:$('#massOut'),heightOut:$('#heightOut'),ballSizeOut:$('#ballSizeOut'),countOut:$('#countOut'),viewSizeOut:$('#viewSizeOut'),drop:$('#drop'),reset:$('#reset'),record:$('#record'),recordStatus:$('#recordStatus'),velocity:$('#velocity'),weightForce:$('#weightForce'),buoyForce:$('#buoyForce'),submerge:$('#submerge'),contacts:$('#contacts'),fps:$('#fps'),state:$('#state')};
+function $(q){return document.querySelector(q)}
+const isCompactView=()=>app.dataset.view==='mobile';
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x07111c);
+scene.fog=new THREE.FogExp2(0x07111c,.035);
+const camera=new THREE.PerspectiveCamera(46,16/9,.05,80);
+let yaw=.53,pitch=.24,dist=11.2,tyaw=yaw,tpitch=pitch,tdist=dist;
+const camTarget=new THREE.Vector3(0,-.45,0);
+function setCamera(){const cp=Math.cos(pitch);camera.position.set(Math.sin(yaw)*cp*dist,camTarget.y+Math.sin(pitch)*dist,Math.cos(yaw)*cp*dist);camera.lookAt(camTarget)}setCamera();
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+let renderDpr=Math.min(devicePixelRatio,1.6);renderer.setPixelRatio(renderDpr);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
+frame.prepend(renderer.domElement);
+let mediaRecorder=null,recordChunks=[],recordStream=null,recordCanvas=null,recordContext=null,recordFrameId=0,lastRecordFrame=0,isRecording=false,recordFps=30;
+function bestRecordingMime(){if(!window.MediaRecorder)return'';const types=['video/mp4','video/mp4;codecs=avc1.424028','video/mp4;codecs=avc1.42E01E'];return types.find(type=>MediaRecorder.isTypeSupported(type))||''}
+function lockRecordingLayout(locked){for(const control of document.querySelectorAll('[data-view],#viewSize'))control.disabled=locked}
+function restoreRecordingQuality(){isRecording=false;lockRecordingLayout(false);ui.record.disabled=false;ui.record.classList.remove('recording');ui.record.textContent='START MP4 RECORDING'}
+function pumpRecordingFrame(now){if(!isRecording||!recordContext)return;if(now-lastRecordFrame>=1000/recordFps-1){recordContext.drawImage(renderer.domElement,0,0,recordCanvas.width,recordCanvas.height);lastRecordFrame=now}recordFrameId=requestAnimationFrame(pumpRecordingFrame)}
+function releaseRecordingResources(){cancelAnimationFrame(recordFrameId);recordFrameId=0;if(recordStream)for(const track of recordStream.getTracks())track.stop();recordStream=null;recordContext=null;if(recordCanvas){recordCanvas.width=1;recordCanvas.height=1}recordCanvas=null;mediaRecorder=null;recordChunks=[]}
+function downloadRecording(){const mime=mediaRecorder?.mimeType||'video/mp4',blob=new Blob(recordChunks,{type:'video/mp4'});if(blob.size){const url=URL.createObjectURL(blob),link=document.createElement('a'),stamp=new Date().toISOString().replace(/[:.]/g,'-');link.href=url;link.download='metal-net-buoyancy-'+stamp+'.mp4';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);ui.recordStatus.textContent='MP4 downloaded'}else ui.recordStatus.textContent='No MP4 video data';releaseRecordingResources();restoreRecordingQuality()}
+function stopRecording(){if(!mediaRecorder||mediaRecorder.state==='inactive')return;ui.record.disabled=true;ui.record.textContent='FINALIZING MP4…';ui.recordStatus.textContent='Encoding MP4…';isRecording=false;cancelAnimationFrame(recordFrameId);try{mediaRecorder.requestData()}catch{}setTimeout(()=>{if(mediaRecorder?.state!=='inactive')mediaRecorder.stop()},160)}
+function startRecording(){const source=renderer.domElement,mime=bestRecordingMime();if(!HTMLCanvasElement.prototype.captureStream||!window.MediaRecorder||!mime){ui.recordStatus.textContent='MP4 unsupported';ui.state.textContent='Use current Chrome, Edge or Safari for MP4';return}const cores=navigator.hardwareConcurrency||4,compact=isCompactView();recordFps=cores<=4?24:30;recordCanvas=document.createElement('canvas');recordCanvas.width=compact?1080:1920;recordCanvas.height=compact?1920:1080;recordContext=recordCanvas.getContext('2d',{alpha:false,desynchronized:true});recordContext.imageSmoothingEnabled=true;recordContext.imageSmoothingQuality='high';recordContext.drawImage(source,0,0,recordCanvas.width,recordCanvas.height);lastRecordFrame=performance.now();isRecording=true;lockRecordingLayout(true);recordFrameId=requestAnimationFrame(pumpRecordingFrame);recordStream=recordCanvas.captureStream(recordFps);recordChunks=[];const bitrate=cores<=4?8000000:12000000;try{mediaRecorder=new MediaRecorder(recordStream,{mimeType:mime,videoBitsPerSecond:bitrate})}catch{releaseRecordingResources();restoreRecordingQuality();ui.recordStatus.textContent='MP4 encoder unavailable';return}mediaRecorder.ondataavailable=event=>{if(event.data?.size)recordChunks.push(event.data)};mediaRecorder.onerror=()=>{ui.recordStatus.textContent='MP4 recording error';if(mediaRecorder?.state!=='inactive')mediaRecorder.stop();else{releaseRecordingResources();restoreRecordingQuality()}};mediaRecorder.onstop=downloadRecording;mediaRecorder.start(1000);ui.record.classList.add('recording');ui.record.textContent='STOP & DOWNLOAD MP4';ui.recordStatus.textContent=recordCanvas.width+'×'+recordCanvas.height+' • '+recordFps+' fps';ui.state.textContent='Full HD MP4 recording'}
+ui.record.addEventListener('click',()=>isRecording?stopRecording():startRecording());
+const hemi=new THREE.HemisphereLight(0xbfe8ff,0x091019,1.4);scene.add(hemi);
+const key=new THREE.DirectionalLight(0xffe5bd,3.2);key.position.set(-5,8,5);key.castShadow=true;key.shadow.mapSize.set(2048,2048);key.shadow.camera.left=-8;key.shadow.camera.right=8;key.shadow.camera.top=8;key.shadow.camera.bottom=-8;key.shadow.bias=-.00025;key.shadow.normalBias=.025;scene.add(key);
+const rim=new THREE.PointLight(0x44c9f0,35,18,2);rim.position.set(4,1,-3);scene.add(rim);
+
+// Tank, depth gradients and animated translucent water.
+const tank=new THREE.Group();scene.add(tank);
+const glassMat=new THREE.MeshPhysicalMaterial({color:0x183348,transparent:true,opacity:.15,roughness:.05,metalness:0,transmission:.35,depthWrite:false,side:THREE.DoubleSide});
+const tankFloor=new THREE.Mesh(new THREE.BoxGeometry(8.5,.18,8.5),new THREE.MeshStandardMaterial({color:0x15212b,roughness:.82,metalness:.05}));tankFloor.position.y=FLOOR_Y-.1;tankFloor.receiveShadow=true;tank.add(tankFloor);
+for(const [x,y,z,sx,sy,sz] of [[-4.25,-2.2,0,.08,4.4,8.5],[4.25,-2.2,0,.08,4.4,8.5],[0,-2.2,-4.25,8.5,4.4,.08]]){const w=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),glassMat);w.position.set(x,y,z);tank.add(w)}
+const waterGeo=new THREE.PlaneGeometry(8.4,8.4,34,34);waterGeo.rotateX(-Math.PI/2);const baseWater=waterGeo.attributes.position.array.slice();
+const waterMat=new THREE.MeshPhysicalMaterial({color:0x1889aa,transparent:true,opacity:.48,roughness:.08,metalness:.05,transmission:.28,thickness:1.2,side:THREE.DoubleSide,depthWrite:false});
+const water=new THREE.Mesh(waterGeo,waterMat);water.position.y=WATER_Y;water.renderOrder=4;tank.add(water);
+const underWater=new THREE.Mesh(new THREE.BoxGeometry(8.35,4.35,8.35),new THREE.MeshBasicMaterial({color:0x07546c,transparent:true,opacity:.17,side:THREE.BackSide,depthWrite:false}));underWater.position.y=-2.18;tank.add(underWater);
+const grid=new THREE.GridHelper(8.4,14,0x23506a,0x163143);grid.position.y=FLOOR_Y+.02;grid.material.transparent=true;grid.material.opacity=.28;tank.add(grid);
+
+// Floating spheres use sphere-cap displacement for buoyancy.
+let balls=[],ballGeometry;const ballGroup=new THREE.Group();scene.add(ballGroup);
+const palette=[0xff6f69,0xffb84d,0x5cd5d1,0x8c7cf4,0xf06db4,0x9ed85c],ballMaterials=palette.map(color=>new THREE.MeshPhysicalMaterial({color,roughness:.23,metalness:.02,clearcoat:.75,clearcoatRoughness:.14}));
+function sphereVolume(r){return 4*Math.PI*r*r*r/3}
+function submergedFraction(y,r){let h=THREE.MathUtils.clamp(WATER_Y-(y-r),0,2*r);return Math.PI*h*h*(r-h/3)/sphereVolume(r)}
+function makeBalls(){while(ballGroup.children.length)ballGroup.remove(ballGroup.children[0]);if(ballGeometry)ballGeometry.dispose();balls=[];const n=+ui.count.value,r=+ui.ballSize.value/2,volume=sphereVolume(r);ballGeometry=new THREE.SphereGeometry(r,isCompactView()?20:30,isCompactView()?14:20);let seed=7319;const rnd=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296);for(let i=0;i<n;i++){let p,tries=0;do{const a=rnd()*Math.PI*2,rad=Math.sqrt(rnd())*3.25;p=new THREE.Vector3(Math.cos(a)*rad,r*.58+(rnd()-.5)*.08,Math.sin(a)*rad)}while(++tries<80&&balls.some(b=>b.p.distanceTo(p)<r*2.12));const mesh=new THREE.Mesh(ballGeometry,ballMaterials[i%ballMaterials.length]);mesh.castShadow=true;mesh.receiveShadow=true;mesh.position.copy(p);ballGroup.add(mesh);const mass=volume*125;balls.push({p,v:new THREE.Vector3(),r,m:mass,invMass:1/mass,volume,area:Math.PI*r*r,mesh,spin:new THREE.Vector3((rnd()-.5)*.8,(rnd()-.5)*.8,(rnd()-.5)*.8),squash:0})}}
+
+// Net is a Verlet cloth with structural, shear and bending constraints.
+let nodes=[],links=[],netN=13,netGroup=new THREE.Group(),wireMesh,knotMesh,netReleased=false,contactCount=0,netStartY=3,netWireRadius=.002,visualWireRadius=.012;
+scene.add(netGroup);
+const unitCylinder=new THREE.CylinderGeometry(1,1,1,7,1);unitCylinder.translate(0,.5,0);const knotGeo=new THREE.SphereGeometry(1,10,7);const metalMat=new THREE.MeshStandardMaterial({color:0xc9a352,metalness:.9,roughness:.2,depthTest:true,depthWrite:true});const dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0),axis=new THREE.Vector3(),quat=new THREE.Quaternion();
+function buildNet(){scene.remove(netGroup);netGroup=new THREE.Group();scene.add(netGroup);nodes=[];links=[];netN=isCompactView()?11:13;const span=+ui.size.value,step=span/(netN-1),totalMass=+ui.mass.value,nodeMass=totalMass/(netN*netN),structuralLength=2*netN*(netN-1)*step;netWireRadius=Math.sqrt(totalMass/(RHO_STEEL*Math.PI*structuralLength));visualWireRadius=Math.max(.011,netWireRadius*2.8);netStartY=+ui.height.value;for(let z=0;z<netN;z++)for(let x=0;x<netN;x++){const px=(x/(netN-1)-.5)*span,pz=(z/(netN-1)-.5)*span,p=new THREE.Vector3(px,netStartY,pz);nodes.push({p,old:p.clone(),mass:nodeMass,invMass:1/nodeMass,volume:nodeMass/RHO_STEEL,hydroArea:4*netWireRadius*step})}const add=(a,b,stiff=1,collides=false)=>links.push({a,b,len:nodes[a].p.distanceTo(nodes[b].p),stiff,collides});for(let z=0;z<netN;z++)for(let x=0;x<netN;x++){const i=z*netN+x;if(x<netN-1)add(i,i+1,1,true);if(z<netN-1)add(i,i+netN,1,true);if(x<netN-1&&z<netN-1){add(i,i+netN+1,.7);add(i+1,i+netN,.7)}if(x<netN-2)add(i,i+2,.25);if(z<netN-2)add(i,i+netN*2,.25)}const capacity=2*netN*(netN-1);wireMesh=new THREE.InstancedMesh(unitCylinder,metalMat,capacity);wireMesh.castShadow=true;wireMesh.receiveShadow=true;wireMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);netGroup.add(wireMesh);knotMesh=new THREE.InstancedMesh(knotGeo,metalMat,nodes.length);knotMesh.castShadow=true;knotMesh.receiveShadow=true;knotMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);netGroup.add(knotMesh);netReleased=false;syncNet()}
+function syncNet(){let k=0;for(let z=0;z<netN;z++)for(let x=0;x<netN;x++){const i=z*netN+x;if(x<netN-1)placeWire(k++,nodes[i].p,nodes[i+1].p,visualWireRadius);if(z<netN-1)placeWire(k++,nodes[i].p,nodes[i+netN].p,visualWireRadius)}wireMesh.count=k;wireMesh.instanceMatrix.needsUpdate=true;for(let i=0;i<nodes.length;i++){dummy.position.copy(nodes[i].p);dummy.quaternion.identity();dummy.scale.setScalar(visualWireRadius*2.05);dummy.updateMatrix();knotMesh.setMatrixAt(i,dummy.matrix)}knotMesh.instanceMatrix.needsUpdate=true}
+function placeWire(i,a,b,r){axis.subVectors(b,a);const len=axis.length();quat.setFromUnitVectors(up,axis.clone().normalize());dummy.position.copy(a);dummy.quaternion.copy(quat);dummy.scale.set(r,len,r);dummy.updateMatrix();wireMesh.setMatrixAt(i,dummy.matrix)}
+
+const tmp=new THREE.Vector3(),tmp2=new THREE.Vector3(),segment=new THREE.Vector3(),closest=new THREE.Vector3(),normal=new THREE.Vector3(),relativeVelocity=new THREE.Vector3(),tangent=new THREE.Vector3();
+function contactRestitution(ball,impactSpeed){const wet=THREE.MathUtils.clamp((ball.submerged??submergedFraction(ball.p.y,ball.r))*1.6,0,1),speedLoss=THREE.MathUtils.clamp((impactSpeed-2)/8,0,1);return THREE.MathUtils.lerp(.48,.17,wet)*THREE.MathUtils.lerp(1,.76,speedLoss)}
+function markBallImpact(ball,speed){if(speed>.35)ball.squash=Math.max(ball.squash,Math.min(.14,speed*.014))}
+function integrateNet(dt){
+  if(!netReleased){contactCount=0;return}
+  const contactPairs=new Set(),surfaceBand=Math.max(.035,netWireRadius*5),contactRadius=Math.max(.018,netWireRadius);
+  for(const n of nodes){
+    let vx=(n.p.x-n.old.x)/dt,vy=(n.p.y-n.old.y)/dt,vz=(n.p.z-n.old.z)/dt;
+    const sub=THREE.MathUtils.clamp((WATER_Y-n.p.y+surfaceBand)/(2*surfaceBand),0,1),speed=Math.hypot(vx,vy,vz),rho=THREE.MathUtils.lerp(RHO_AIR,RHO_WATER,sub),cd=THREE.MathUtils.lerp(1.05,1.2,sub);
+    if(speed>.0001){const dragFraction=Math.min(.92,.5*rho*cd*n.hydroArea*speed*dt/n.mass);vx*=1-dragFraction;vy*=1-dragFraction;vz*=1-dragFraction}
+    const buoyancy=RHO_WATER*n.volume*G*sub,ay=-G+buoyancy/n.mass;n.old.copy(n.p);n.p.x+=vx*dt;n.p.y+=vy*dt+ay*dt*dt;n.p.z+=vz*dt;
+  }
+  for(let iter=0;iter<6;iter++){
+    for(const l of links){const na=nodes[l.a],nb=nodes[l.b];tmp.subVectors(nb.p,na.p);const d=tmp.length()||1;if(d<=l.len)continue;const weight=na.invMass+nb.invMass,corr=(d-l.len)/d*l.stiff/weight;tmp.multiplyScalar(corr);na.p.addScaledVector(tmp,na.invMass);nb.p.addScaledVector(tmp,-nb.invMass)}
+    for(let bi=0;bi<balls.length;bi++){
+      const b=balls[bi];
+      for(let ni=0;ni<nodes.length;ni++){
+        const n=nodes[ni];normal.subVectors(n.p,b.p);const min=b.r+contactRadius,d2=normal.lengthSq();if(d2>=min*min||d2<=.000001)continue;
+        contactPairs.add(bi*nodes.length+ni);const d=Math.sqrt(d2),pen=min-d;normal.multiplyScalar(1/d);const weight=n.invMass+b.invMass,nodeMove=pen*n.invMass/weight,ballMove=pen*b.invMass/weight;n.p.addScaledVector(normal,nodeMove);n.old.addScaledVector(normal,nodeMove);b.p.addScaledVector(normal,-ballMove);tmp2.subVectors(n.p,n.old).multiplyScalar(1/dt);relativeVelocity.copy(tmp2).sub(b.v);const rel=relativeVelocity.dot(normal);if(rel<0){const impactSpeed=-rel,restitution=contactRestitution(b,impactSpeed),impulse=(1+restitution)*impactSpeed/weight;n.old.addScaledVector(normal,-impulse*n.invMass*dt);b.v.addScaledVector(normal,-impulse*b.invMass);tangent.copy(relativeVelocity).addScaledVector(normal,-rel);const tangentSpeed=tangent.length();if(tangentSpeed>.0001){const frictionImpulse=Math.min(tangentSpeed/weight,.2*impulse);tangent.multiplyScalar(-frictionImpulse/tangentSpeed);n.old.addScaledVector(tangent,-n.invMass*dt);b.v.addScaledVector(tangent,-b.invMass)}markBallImpact(b,impactSpeed)}
+      }
+      for(let li=0;li<links.length;li++){
+        const l=links[li];if(!l.collides)continue;const na=nodes[l.a],nb=nodes[l.b];segment.subVectors(nb.p,na.p);const len2=segment.lengthSq();if(len2<.000001)continue;tmp.subVectors(b.p,na.p);const t=THREE.MathUtils.clamp(tmp.dot(segment)/len2,0,1);closest.copy(na.p).addScaledVector(segment,t);normal.subVectors(closest,b.p);const min=b.r+contactRadius,d2=normal.lengthSq();if(d2>=min*min||d2<=.000001)continue;
+        contactPairs.add(1000000+bi*links.length+li);const d=Math.sqrt(d2),pen=min-d,ta=1-t;normal.multiplyScalar(1/d);const segmentInv=na.invMass*ta*ta+nb.invMass*t*t,weight=segmentInv+b.invMass,corr=pen/weight,moveA=corr*na.invMass*ta,moveB=corr*nb.invMass*t,moveBall=corr*b.invMass;na.p.addScaledVector(normal,moveA);na.old.addScaledVector(normal,moveA);nb.p.addScaledVector(normal,moveB);nb.old.addScaledVector(normal,moveB);b.p.addScaledVector(normal,-moveBall);const va=tmp.subVectors(na.p,na.old).multiplyScalar(1/dt),vb=tmp2.subVectors(nb.p,nb.old).multiplyScalar(1/dt);relativeVelocity.copy(va).multiplyScalar(ta).addScaledVector(vb,t).sub(b.v);const rel=relativeVelocity.dot(normal);if(rel<0){const impactSpeed=-rel,restitution=contactRestitution(b,impactSpeed),impulse=(1+restitution)*impactSpeed/weight;na.old.addScaledVector(normal,-impulse*na.invMass*ta*dt);nb.old.addScaledVector(normal,-impulse*nb.invMass*t*dt);b.v.addScaledVector(normal,-impulse*b.invMass);tangent.copy(relativeVelocity).addScaledVector(normal,-rel);const tangentSpeed=tangent.length();if(tangentSpeed>.0001){const frictionImpulse=Math.min(tangentSpeed/weight,.18*impulse);tangent.multiplyScalar(-frictionImpulse/tangentSpeed);na.old.addScaledVector(tangent,-na.invMass*ta*dt);nb.old.addScaledVector(tangent,-nb.invMass*t*dt);b.v.addScaledVector(tangent,-b.invMass)}markBallImpact(b,impactSpeed)}
+      }
+    }
+  }
+  contactCount=contactPairs.size;
+  for(const n of nodes){if(n.p.y<FLOOR_Y+.08){const vy=(n.p.y-n.old.y)/dt;n.p.y=FLOOR_Y+.08;n.old.y=n.p.y+Math.min(0,vy)*.08*dt;n.old.x=THREE.MathUtils.lerp(n.old.x,n.p.x,.22);n.old.z=THREE.MathUtils.lerp(n.old.z,n.p.z,.22)}const x=THREE.MathUtils.clamp(n.p.x,-4.05,4.05),z=THREE.MathUtils.clamp(n.p.z,-4.05,4.05);n.old.x+=x-n.p.x;n.old.z+=z-n.p.z;n.p.x=x;n.p.z=z}
+}
+function integrateBalls(dt){for(const b of balls){const frac=b.submerged=submergedFraction(b.p.y,b.r),displaced=b.volume*frac,addedMass=.5*RHO_WATER*displaced,effectiveMass=b.m+addedMass,buoyancy=RHO_WATER*displaced*G;b.v.y+=(-b.m*G+buoyancy)/effectiveMass*dt;const speed=b.v.length();if(speed>.0001){const wetArea=b.area*Math.min(1,Math.pow(frac,2/3)*1.25),dryArea=b.area-wetArea,dragForce=.5*(RHO_WATER*.47*wetArea+RHO_AIR*.47*dryArea)*speed*speed,dragFraction=Math.min(.9,dragForce*dt/(effectiveMass*speed));b.v.multiplyScalar(1-dragFraction)}b.p.addScaledVector(b.v,dt);const limit=4.08-b.r;if(Math.abs(b.p.x)>limit){b.p.x=Math.sign(b.p.x)*limit;b.v.x*=-.35;b.v.y*=.92;b.v.z*=.92}if(Math.abs(b.p.z)>limit){b.p.z=Math.sign(b.p.z)*limit;b.v.z*=-.35;b.v.x*=.92;b.v.y*=.92}if(b.p.y-b.r<FLOOR_Y){b.p.y=FLOOR_Y+b.r;if(b.v.y<0)b.v.y*=-.18;b.v.x*=.78;b.v.z*=.78}}
+  for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){const a=balls[i],b=balls[j];tmp.subVectors(b.p,a.p);const min=a.r+b.r,d2=tmp.lengthSq();if(d2>=min*min||d2<=.000001)continue;const d=Math.sqrt(d2),pen=min-d;tmp.multiplyScalar(1/d);const weight=a.invMass+b.invMass;a.p.addScaledVector(tmp,-pen*a.invMass/weight);b.p.addScaledVector(tmp,pen*b.invMass/weight);const rel=tmp2.subVectors(b.v,a.v).dot(tmp);if(rel<0){const impulse=-(1.18)*rel/weight;a.v.addScaledVector(tmp,-impulse*a.invMass);b.v.addScaledVector(tmp,impulse*b.invMass)}}}
+function syncBalls(dt){for(const b of balls){b.mesh.position.copy(b.p);const frac=submergedFraction(b.p.y,b.r),rolling=1-frac;b.spin.x=THREE.MathUtils.lerp(b.spin.x,b.v.z/b.r,rolling*.04);b.spin.z=THREE.MathUtils.lerp(b.spin.z,-b.v.x/b.r,rolling*.04);b.spin.multiplyScalar(Math.exp(-frac*1.8*dt));b.mesh.rotation.x+=b.spin.x*dt;b.mesh.rotation.y+=b.spin.y*dt;b.mesh.rotation.z+=b.spin.z*dt;b.squash*=Math.exp(-7.5*dt);const sy=1-b.squash,sxz=1/Math.sqrt(sy);b.mesh.scale.set(sxz,sy,sxz)}}
+
+function reset(){netReleased=false;makeBalls();buildNet();ui.state.textContent='Ready to drop';ui.drop.disabled=false;ui.drop.textContent='DROP NET';ui.velocity.textContent='0.00 m/s';ui.buoyForce.textContent='0.0 N';ui.submerge.textContent='0%';ui.contacts.textContent='0'}
+function updateLabels(){ui.sizeOut.textContent=(+ui.size.value).toFixed(1)+' m';ui.massOut.textContent=ui.mass.value+' kg';ui.heightOut.textContent=(+ui.height.value).toFixed(1)+' m';ui.ballSizeOut.textContent=(+ui.ballSize.value).toFixed(2)+' m';ui.countOut.textContent=ui.count.value;ui.weightForce.textContent=(+ui.mass.value*G).toFixed(1)+' N'}
+function homeDistance(){return isCompactView()?15.1:11.2}
+function setView(mode){app.dataset.view=mode;document.querySelectorAll('button[data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view===mode));tdist=homeDistance();if(!netReleased)ui.state.textContent=mode==='mobile'?'Mobile view ready':'Desktop view ready';resize()}
+function setViewSize(){const size=+ui.viewSize.value;app.style.setProperty('--frame-scale',size/100);ui.viewSizeOut.textContent=size+'%';resize()}
+for(const el of [ui.size,ui.mass,ui.height,ui.ballSize,ui.count])el.addEventListener('input',()=>{updateLabels();reset()});
+document.querySelectorAll('button[data-view]').forEach(button=>button.onclick=()=>setView(button.dataset.view));ui.viewSize.addEventListener('input',setViewSize);
+ui.drop.addEventListener('click',()=>{if(netReleased)return;netReleased=true;ui.drop.disabled=true;ui.drop.textContent='NET RELEASED';ui.state.textContent='Net falling'});ui.reset.addEventListener('click',reset);
+let timeScale=1;document.querySelectorAll('[data-speed]').forEach(c=>c.onclick=()=>{document.querySelectorAll('[data-speed]').forEach(x=>x.classList.remove('active'));c.classList.add('active');timeScale=+c.dataset.speed});
+
+// Orbit / pinch camera.
+let pointers=new Map(),drag=false,lastX=0,lastY=0,lastPinch=0;
+renderer.domElement.addEventListener('pointerdown',e=>{renderer.domElement.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});drag=true;lastX=e.clientX;lastY=e.clientY});
+renderer.domElement.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1&&drag){tyaw-=(e.clientX-lastX)*.006;tpitch=THREE.MathUtils.clamp(tpitch+(e.clientY-lastY)*.005,-.18,1.05);lastX=e.clientX;lastY=e.clientY}else if(pointers.size===2){const p=[...pointers.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);if(lastPinch)tdist=THREE.MathUtils.clamp(tdist+(lastPinch-d)*.018,8,20);lastPinch=d}});
+function endPointer(e){pointers.delete(e.pointerId);drag=pointers.size>0;if(pointers.size<2)lastPinch=0}renderer.domElement.addEventListener('pointerup',endPointer);renderer.domElement.addEventListener('pointercancel',endPointer);renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();tdist=THREE.MathUtils.clamp(tdist+e.deltaY*.01,8,21)},{passive:false});renderer.domElement.addEventListener('dblclick',()=>{tyaw=.53;tpitch=.24;tdist=homeDistance()});
+function maxDpr(){const r=frame.getBoundingClientRect(),large=r.width*r.height>900000;return Math.min(devicePixelRatio,isCompactView()?1.35:large?1.4:1.65)}
+function resize(){const r=frame.getBoundingClientRect();if(!r.width||!r.height)return;if(!isRecording)renderDpr=Math.min(renderDpr,maxDpr());renderer.setPixelRatio(renderDpr);renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(frame);resize();
+
+let prev=performance.now(),acc=0,simT=0,frames=0,fpsT=prev,waterFrame=0;
+function animate(now){const raw=Math.min((now-prev)/1000,.04);prev=now;acc+=raw*timeScale;let steps=0;while(acc>=FIXED&&steps<6){integrateBalls(FIXED);integrateNet(FIXED);acc-=FIXED;simT+=FIXED;steps++}syncNet();syncBalls(steps*FIXED);
+  // Gentle procedural ripples; vertex count is intentionally modest for mobile GPUs.
+  const pa=water.geometry.attributes.position.array;for(let i=0;i<pa.length;i+=3){const x=baseWater[i],z=baseWater[i+2];pa[i+1]=Math.sin(x*1.5+simT*1.7)*.025+Math.cos(z*1.8-simT*1.25)*.018}water.geometry.attributes.position.needsUpdate=true;if(++waterFrame%(isRecording?4:2)===0)water.geometry.computeVertexNormals();
+  yaw+=(tyaw-yaw)*.1;pitch+=(tpitch-pitch)*.1;dist+=(tdist-dist)*.1;setCamera();renderer.render(scene,camera);frames++;if(now-fpsT>1200){const fps=Math.round(frames*1000/(now-fpsT)),ceiling=maxDpr();if(!isRecording){if(fps<43&&renderDpr>1){renderDpr=Math.max(1,renderDpr-.15);renderer.setPixelRatio(renderDpr)}else if(fps>57&&renderDpr<ceiling){renderDpr=Math.min(ceiling,renderDpr+.1);renderer.setPixelRatio(renderDpr)}}ui.fps.textContent=fps+' / '+(isRecording?'recording':renderDpr>1.4?'ultra':renderDpr>1.1?'high':'balanced');frames=0;fpsT=now;let vy=0,sub=0;for(const n of nodes){vy+=(n.p.y-n.old.y)/FIXED;sub+=THREE.MathUtils.clamp((WATER_Y-n.p.y+.035)/.07,0,1)}vy/=nodes.length;const meanSub=sub/nodes.length;ui.velocity.textContent=Math.abs(vy).toFixed(2)+' m/s';ui.buoyForce.textContent=(RHO_WATER*(+ui.mass.value/RHO_STEEL)*G*meanSub).toFixed(1)+' N';ui.submerge.textContent=Math.round(meanSub*100)+'%';ui.contacts.textContent=contactCount;if(netReleased){const minY=Math.min(...nodes.map(n=>n.p.y));ui.state.textContent=minY<WATER_Y-.2?'Net submerging':minY<WATER_Y+.2?'Water impact':'Net falling'}}requestAnimationFrame(animate)}
+document.addEventListener('visibilitychange',()=>{prev=performance.now();acc=0});updateLabels();setViewSize();setView('desktop');reset();requestAnimationFrame(animate);setTimeout(()=>loading.classList.add('hide'),350);
+</script>
+</body>
+</html>

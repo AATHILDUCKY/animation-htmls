@@ -1,0 +1,6823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
+>
+
+<title>360° Destructible Wall</title>
+
+<script type="importmap">
+{
+    "imports": {
+        "three/webgpu":
+        "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.185.1/three.webgpu.js"
+    }
+}
+</script>
+
+<style>
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+
+    background: #06080c;
+    color: white;
+
+    font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    overscroll-behavior: none;
+}
+
+
+/* =========================================================
+   MAIN LAYOUT
+========================================================= */
+
+#app {
+    width: 100vw;
+    height: 100dvh;
+
+    display: grid;
+
+    grid-template-columns:
+        clamp(205px, 22vw, 290px)
+        minmax(0, 1fr);
+
+    overflow: hidden;
+
+    background: #07090d;
+}
+
+
+/* =========================================================
+   LEFT CONTROL PANEL
+   NOT RECORDED
+========================================================= */
+
+#sidebar {
+    position: relative;
+    z-index: 20;
+
+    height: 100dvh;
+
+    padding:
+        max(16px, env(safe-area-inset-top))
+        14px
+        max(18px, env(safe-area-inset-bottom));
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    background:
+        linear-gradient(
+            180deg,
+            #10131a,
+            #080a0f
+        );
+
+    border-right:
+        1px solid rgba(255,255,255,.09);
+
+    box-shadow:
+        10px 0 40px rgba(0,0,0,.35);
+}
+
+
+/* =========================================================
+   BRAND
+========================================================= */
+
+.brand {
+    margin-bottom: 18px;
+}
+
+.brand-title {
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+}
+
+.brand-subtitle {
+    margin-top: 6px;
+
+    font-size: 9px;
+    line-height: 1.55;
+
+    color: rgba(255,255,255,.43);
+}
+
+
+/* =========================================================
+   PANELS
+========================================================= */
+
+.panel {
+    margin-bottom: 11px;
+    padding: 12px;
+
+    border-radius: 13px;
+
+    background:
+        rgba(255,255,255,.042);
+
+    border:
+        1px solid rgba(255,255,255,.075);
+}
+
+.panel-title {
+    margin-bottom: 10px;
+
+    font-size: 8px;
+    font-weight: 850;
+
+    letter-spacing: .12em;
+
+    text-transform: uppercase;
+
+    color: rgba(255,255,255,.48);
+}
+
+
+/* =========================================================
+   STATS
+========================================================= */
+
+.stats {
+    display: grid;
+
+    grid-template-columns:
+        1fr auto;
+
+    gap: 6px 10px;
+
+    font-size: 9px;
+}
+
+.stats span {
+    color: rgba(255,255,255,.47);
+}
+
+.stats strong {
+    color: rgba(255,255,255,.95);
+
+    font-size: 9px;
+
+    font-variant-numeric:
+        tabular-nums;
+}
+
+
+/* =========================================================
+   SPEED CONTROL
+========================================================= */
+
+.speed-value {
+    margin-bottom: 3px;
+
+    text-align: center;
+
+    font-size: 26px;
+    font-weight: 900;
+
+    line-height: 1;
+}
+
+.speed-unit {
+    text-align: center;
+
+    margin-bottom: 12px;
+
+    font-size: 9px;
+
+    letter-spacing: .12em;
+
+    color: rgba(255,255,255,.48);
+}
+
+.speed-ms {
+    margin-top: 8px;
+
+    text-align: center;
+
+    font-size: 8px;
+
+    color: rgba(255,255,255,.42);
+}
+
+input[type="range"] {
+    width: 100%;
+
+    accent-color: #f6c355;
+}
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+button {
+    display: block;
+
+    width: 100%;
+    min-height: 42px;
+
+    border: 0;
+
+    border-radius: 11px;
+
+    cursor: pointer;
+
+    font-family: inherit;
+
+    font-size: 9px;
+    font-weight: 850;
+
+    letter-spacing: .07em;
+
+    user-select: none;
+
+    transition:
+        transform .12s ease,
+        background .12s ease,
+        opacity .12s ease;
+}
+
+button:active:not(:disabled) {
+    transform: scale(.97);
+}
+
+button:disabled {
+    cursor: default;
+    opacity: .65;
+}
+
+#launchButton {
+    color: #151515;
+
+    background:
+        linear-gradient(
+            180deg,
+            #ffdd7e,
+            #edb94c
+        );
+}
+
+.secondaryButton {
+    margin-top: 7px;
+
+    color: white;
+
+    background:
+        rgba(255,255,255,.075);
+
+    border:
+        1px solid rgba(255,255,255,.08);
+}
+
+
+/* =========================================================
+   RECORD
+========================================================= */
+
+#recordButton {
+    color: white;
+
+    background:
+        linear-gradient(
+            180deg,
+            #c72d2d,
+            #a71f1f
+        );
+}
+
+#recordButton.recording {
+    background:
+        linear-gradient(
+            180deg,
+            #f03737,
+            #c31d1d
+        );
+}
+
+#recordDot {
+    display: inline-block;
+
+    width: 8px;
+    height: 8px;
+
+    margin-right: 6px;
+
+    vertical-align: -1px;
+
+    border-radius: 50%;
+
+    background: white;
+}
+
+#recordButton.recording #recordDot {
+    animation:
+        blink .85s infinite;
+}
+
+@keyframes blink {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .25;
+    }
+}
+
+#recordTimer {
+    margin-top: 9px;
+
+    text-align: center;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    color: rgba(255,255,255,.65);
+
+    font-variant-numeric:
+        tabular-nums;
+}
+
+
+/* =========================================================
+   HELP
+========================================================= */
+
+.help {
+    font-size: 8px;
+    line-height: 1.75;
+
+    color: rgba(255,255,255,.43);
+}
+
+.help strong {
+    color: rgba(255,255,255,.82);
+}
+
+
+/* =========================================================
+   RIGHT VIEWER
+========================================================= */
+
+#viewer {
+    position: relative;
+
+    min-width: 0;
+
+    width: 100%;
+    height: 100dvh;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+
+    background:
+        radial-gradient(
+            circle at center,
+            #161b24 0%,
+            #080a0e 68%
+        );
+}
+
+
+/* =========================================================
+   9:16 ANIMATION
+
+   ONLY THE THREE.JS CANVAS IS RECORDED
+========================================================= */
+
+#animationFrame {
+    position: relative;
+
+    width:
+        min(
+            calc((100dvh - 24px) * 9 / 16),
+            calc(100% - 24px)
+        );
+
+    aspect-ratio: 9 / 16;
+
+    overflow: hidden;
+
+    background: #000;
+
+    border-radius: 9px;
+
+    border:
+        1px solid rgba(255,255,255,.10);
+
+    box-shadow:
+        0 30px 90px rgba(0,0,0,.65);
+
+    touch-action: none;
+}
+
+#animationFrame canvas {
+    position: absolute;
+    inset: 0;
+
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    cursor: grab;
+
+    touch-action: none;
+}
+
+#animationFrame canvas:active {
+    cursor: grabbing;
+}
+
+
+/* =========================================================
+   LOADING
+   NOT RECORDED
+========================================================= */
+
+#loading {
+    position: absolute;
+    inset: 0;
+
+    z-index: 50;
+
+    display: grid;
+
+    place-items: center;
+
+    background: #070a0f;
+
+    color: white;
+
+    font-size: 9px;
+    font-weight: 800;
+
+    letter-spacing: .14em;
+
+    pointer-events: none;
+
+    transition:
+        opacity .4s ease;
+}
+
+#loading.hide {
+    opacity: 0;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 700px) {
+
+    #app {
+        grid-template-columns:
+            150px
+            minmax(0,1fr);
+    }
+
+    #sidebar {
+        padding: 10px 8px;
+    }
+
+    .brand {
+        margin-bottom: 11px;
+    }
+
+    .brand-title {
+        font-size: 9px;
+    }
+
+    .brand-subtitle {
+        font-size: 7px;
+    }
+
+    .panel {
+        padding: 8px;
+        margin-bottom: 7px;
+
+        border-radius: 10px;
+    }
+
+    .panel-title {
+        margin-bottom: 6px;
+        font-size: 7px;
+    }
+
+    .stats,
+    .stats strong {
+        font-size: 7px;
+    }
+
+    .stats {
+        gap: 4px 7px;
+    }
+
+    .speed-value {
+        font-size: 20px;
+    }
+
+    .speed-unit,
+    .speed-ms {
+        font-size: 7px;
+    }
+
+    button {
+        min-height: 36px;
+        font-size: 7px;
+    }
+
+    .help {
+        font-size: 7px;
+        line-height: 1.55;
+    }
+}
+
+
+@media (max-width: 440px) {
+
+    #app {
+        grid-template-columns:
+            122px
+            minmax(0,1fr);
+    }
+
+    #sidebar {
+        padding: 7px 5px;
+    }
+
+    .brand-title {
+        font-size: 8px;
+    }
+
+    .brand-subtitle {
+        display: none;
+    }
+
+    .panel {
+        padding: 6px;
+    }
+
+    .speed-value {
+        font-size: 17px;
+    }
+
+    button {
+        min-height: 32px;
+        font-size: 6.5px;
+    }
+
+    .help {
+        font-size: 6.5px;
+    }
+
+    #animationFrame {
+        width:
+            min(
+                calc((100dvh - 12px) * 9 / 16),
+                calc(100% - 10px)
+            );
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="app">
+
+
+<!-- =========================================================
+     LEFT CONTROLS
+========================================================== -->
+
+<aside id="sidebar">
+
+    <div class="brand">
+
+        <div class="brand-title">
+            Destructible Wall
+        </div>
+
+        <div class="brand-subtitle">
+            360° physics + real km/h launch speed
+        </div>
+
+    </div>
+
+
+    <!-- PERFORMANCE -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+            Performance
+        </div>
+
+        <div class="stats">
+
+            <span>Boxes</span>
+            <strong id="boxCount">0</strong>
+
+            <span>Moving</span>
+            <strong id="dynamicCount">0</strong>
+
+            <span>FPS</span>
+            <strong id="fps">0</strong>
+
+            <span>Renderer</span>
+            <strong id="rendererType">...</strong>
+
+        </div>
+
+    </div>
+
+
+    <!-- REAL SPEED -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+            Launch Speed
+        </div>
+
+        <div
+            id="speedValue"
+            class="speed-value"
+        >
+            180
+        </div>
+
+        <div class="speed-unit">
+            KM/H
+        </div>
+
+        <input
+            id="speedSlider"
+            type="range"
+            min="40"
+            max="360"
+            step="10"
+            value="180"
+        >
+
+        <div
+            id="speedMS"
+            class="speed-ms"
+        >
+            50.0 m/s
+        </div>
+
+    </div>
+
+
+    <!-- SIMULATION -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+            Simulation
+        </div>
+
+        <button id="launchButton">
+            LAUNCH
+        </button>
+
+        <button
+            id="resetButton"
+            class="secondaryButton"
+        >
+            RESET WALL
+        </button>
+
+    </div>
+
+
+    <!-- CAMERA -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+            360° Camera
+        </div>
+
+        <button
+            id="resetCameraButton"
+            class="secondaryButton"
+            style="margin-top:0"
+        >
+            RESET CAMERA
+        </button>
+
+        <div
+            class="help"
+            style="margin-top:10px"
+        >
+            <strong>Click</strong> → aim
+            <br>
+
+            <strong>Drag</strong> → 360° rotate
+            <br>
+
+            <strong>Wheel</strong> → zoom
+            <br>
+
+            <strong>Touch drag</strong> → rotate
+            <br>
+
+            <strong>Pinch</strong> → zoom
+        </div>
+
+    </div>
+
+
+    <!-- RECORD -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+            Shorts Recording
+        </div>
+
+        <button id="recordButton">
+
+            <span id="recordDot"></span>
+
+            <span id="recordText">
+                START RECORD
+            </span>
+
+        </button>
+
+        <div id="recordTimer">
+            00:00
+        </div>
+
+        <div
+            class="help"
+            style="margin-top:8px"
+        >
+            <strong>1080 × 1920</strong>
+            <br>
+            animation only
+        </div>
+
+    </div>
+
+</aside>
+
+
+<!-- =========================================================
+     RIGHT ANIMATION
+========================================================== -->
+
+<main id="viewer">
+
+    <div id="animationFrame">
+
+        <div id="loading">
+            LOADING 3D
+        </div>
+
+    </div>
+
+</main>
+
+</div>
+
+
+<script type="module">
+
+import * as THREE
+from "three/webgpu";
+
+import * as TSL
+from
+"https://cdnjs.cloudflare.com/ajax/libs/three.js/0.185.1/three.tsl.js";
+
+
+/* ============================================================
+   DOM
+============================================================ */
+
+const animationFrame =
+    document.getElementById(
+        "animationFrame"
+    );
+
+const loadingElement =
+    document.getElementById(
+        "loading"
+    );
+
+const boxCountElement =
+    document.getElementById(
+        "boxCount"
+    );
+
+const dynamicCountElement =
+    document.getElementById(
+        "dynamicCount"
+    );
+
+const fpsElement =
+    document.getElementById(
+        "fps"
+    );
+
+const rendererTypeElement =
+    document.getElementById(
+        "rendererType"
+    );
+
+const speedSlider =
+    document.getElementById(
+        "speedSlider"
+    );
+
+const speedValueElement =
+    document.getElementById(
+        "speedValue"
+    );
+
+const speedMSElement =
+    document.getElementById(
+        "speedMS"
+    );
+
+const launchButton =
+    document.getElementById(
+        "launchButton"
+    );
+
+const resetButton =
+    document.getElementById(
+        "resetButton"
+    );
+
+const resetCameraButton =
+    document.getElementById(
+        "resetCameraButton"
+    );
+
+const recordButton =
+    document.getElementById(
+        "recordButton"
+    );
+
+const recordText =
+    document.getElementById(
+        "recordText"
+    );
+
+const recordTimer =
+    document.getElementById(
+        "recordTimer"
+    );
+
+
+/* ============================================================
+   WORLD SCALE
+
+   IMPORTANT:
+
+   1 THREE.JS WORLD UNIT = 1 METER
+
+   Therefore:
+
+   km/h / 3.6 = meters per second
+============================================================ */
+
+const KMH_TO_MS =
+    1 / 3.6;
+
+
+/* ============================================================
+   WALL
+============================================================ */
+
+const COLS =
+    24;
+
+const ROWS =
+    27;
+
+const DEPTH =
+    2;
+
+const COUNT =
+    COLS *
+    ROWS *
+    DEPTH;
+
+
+const BOX_SIZE =
+    0.42;
+
+const HALF_BOX =
+    BOX_SIZE *
+    0.5;
+
+const GAP =
+    0.025;
+
+const SPACING =
+    BOX_SIZE +
+    GAP;
+
+
+const WALL_WIDTH =
+    COLS *
+    SPACING;
+
+const WALL_HEIGHT =
+    ROWS *
+    SPACING;
+
+
+/* ============================================================
+   PHYSICS
+
+   Since 1 unit = 1 meter:
+
+   gravity = -9.81 m/s²
+============================================================ */
+
+const FIXED_STEP =
+    1 / 60;
+
+const GRAVITY =
+    -9.81;
+
+const AIR_DRAG =
+    0.998;
+
+const GROUND_RESTITUTION =
+    0.14;
+
+const GROUND_FRICTION =
+    0.80;
+
+
+const BLOCK_RADIUS =
+    BOX_SIZE *
+    0.52;
+
+const BLOCK_DIAMETER =
+    BLOCK_RADIUS *
+    2;
+
+
+/* ============================================================
+   HASH
+============================================================ */
+
+const HASH_SIZE =
+    4096;
+
+const HASH_MASK =
+    HASH_SIZE -
+    1;
+
+const HASH_CELL_SIZE =
+    BOX_SIZE *
+    1.35;
+
+
+/* ============================================================
+   PROJECTILE
+============================================================ */
+
+const PROJECTILE_RADIUS =
+    0.54;
+
+
+/*
+    High-speed collision protection.
+
+    Projectile may move multiple meters per frame at
+    300+ km/h.
+
+    We subdivide projectile motion so it cannot simply
+    teleport through the wall.
+*/
+
+const MAX_PROJECTILE_SUBSTEPS =
+    12;
+
+const PROJECTILE_MAX_STEP_DISTANCE =
+    0.20;
+
+
+/* ============================================================
+   VIDEO
+============================================================ */
+
+const RECORD_WIDTH =
+    1080;
+
+const RECORD_HEIGHT =
+    1920;
+
+const RECORD_FPS =
+    30;
+
+const RECORD_BITRATE =
+    12_000_000;
+
+
+/* ============================================================
+   SCENE
+============================================================ */
+
+const scene =
+    new THREE.Scene();
+
+scene.background =
+    new THREE.Color(
+        0x090c11
+    );
+
+scene.fog =
+    new THREE.FogExp2(
+        0x090c11,
+        0.018
+    );
+
+
+/* ============================================================
+   CAMERA
+============================================================ */
+
+const camera =
+    new THREE.PerspectiveCamera(
+        49,
+        9 / 16,
+        0.08,
+        120
+    );
+
+const cameraTarget =
+    new THREE.Vector3(
+        0,
+        WALL_HEIGHT * 0.44,
+        0
+    );
+
+
+let cameraYaw =
+    0;
+
+let cameraPitch =
+    0.12;
+
+let cameraDistance =
+    21;
+
+
+let targetYaw =
+    cameraYaw;
+
+let targetPitch =
+    cameraPitch;
+
+let targetDistance =
+    cameraDistance;
+
+
+const MAX_CAMERA_PITCH =
+    THREE.MathUtils.degToRad(
+        84
+    );
+
+const MIN_CAMERA_DISTANCE =
+    7;
+
+const MAX_CAMERA_DISTANCE =
+    40;
+
+
+function updateCamera() {
+
+    const cp =
+        Math.cos(
+            cameraPitch
+        );
+
+    camera.position.set(
+
+        cameraTarget.x +
+
+        Math.sin(
+            cameraYaw
+        ) *
+        cp *
+        cameraDistance,
+
+
+        cameraTarget.y +
+
+        Math.sin(
+            cameraPitch
+        ) *
+        cameraDistance,
+
+
+        cameraTarget.z +
+
+        Math.cos(
+            cameraYaw
+        ) *
+        cp *
+        cameraDistance
+
+    );
+
+    camera.lookAt(
+        cameraTarget
+    );
+
+}
+
+updateCamera();
+
+
+/* ============================================================
+   RENDERER
+============================================================ */
+
+const renderer =
+    new THREE.WebGPURenderer({
+
+        antialias: true,
+
+        alpha: false
+
+    });
+
+renderer.toneMapping =
+    THREE.ACESFilmicToneMapping;
+
+renderer.toneMappingExposure =
+    1.15;
+
+renderer.shadowMap.enabled =
+    true;
+
+renderer.shadowMap.type =
+    THREE.PCFShadowMap;
+
+
+renderer.domElement.style.width =
+    "100%";
+
+renderer.domElement.style.height =
+    "100%";
+
+
+animationFrame.prepend(
+    renderer.domElement
+);
+
+
+await renderer.init();
+
+
+rendererTypeElement.textContent =
+
+    navigator.gpu
+
+        ? "WebGPU"
+
+        : "WebGL2";
+
+
+/* ============================================================
+   DISPLAY RESOLUTION
+============================================================ */
+
+let isRecording =
+    false;
+
+
+function resizeRenderer() {
+
+    if (
+        isRecording
+    ) {
+        return;
+    }
+
+    const rect =
+        animationFrame
+        .getBoundingClientRect();
+
+
+    renderer.setPixelRatio(
+
+        Math.min(
+
+            window.devicePixelRatio ||
+            1,
+
+            1.25
+
+        )
+
+    );
+
+
+    renderer.setSize(
+
+        Math.max(
+            1,
+            Math.round(
+                rect.width
+            )
+        ),
+
+        Math.max(
+            1,
+            Math.round(
+                rect.height
+            )
+        ),
+
+        false
+
+    );
+
+}
+
+resizeRenderer();
+
+
+/* ============================================================
+   LIGHTS
+============================================================ */
+
+const hemisphereLight =
+    new THREE.HemisphereLight(
+        0xaecaff,
+        0x30251d,
+        1.30
+    );
+
+scene.add(
+    hemisphereLight
+);
+
+
+const frontLight =
+    new THREE.DirectionalLight(
+        0xffddb2,
+        3.7
+    );
+
+frontLight.position.set(
+    7,
+    14,
+    9
+);
+
+frontLight.castShadow =
+    true;
+
+frontLight.shadow.mapSize.set(
+    1024,
+    1024
+);
+
+frontLight.shadow.camera.left =
+    -9;
+
+frontLight.shadow.camera.right =
+    9;
+
+frontLight.shadow.camera.top =
+    16;
+
+frontLight.shadow.camera.bottom =
+    -3;
+
+frontLight.shadow.camera.near =
+    2;
+
+frontLight.shadow.camera.far =
+    36;
+
+frontLight.shadow.bias =
+    -0.0003;
+
+frontLight.target.position.set(
+    0,
+    WALL_HEIGHT * 0.4,
+    0
+);
+
+scene.add(
+    frontLight
+);
+
+scene.add(
+    frontLight.target
+);
+
+
+/*
+    Rear light for 360° camera.
+*/
+
+const rearLight =
+    new THREE.DirectionalLight(
+        0x9fb9ff,
+        1.45
+    );
+
+rearLight.position.set(
+    -7,
+    11,
+    -10
+);
+
+rearLight.castShadow =
+    false;
+
+rearLight.target.position.set(
+    0,
+    WALL_HEIGHT * 0.44,
+    0
+);
+
+scene.add(
+    rearLight
+);
+
+scene.add(
+    rearLight.target
+);
+
+
+const sideLight =
+    new THREE.DirectionalLight(
+        0xffcfa0,
+        0.70
+    );
+
+sideLight.position.set(
+    12,
+    6,
+    0
+);
+
+sideLight.castShadow =
+    false;
+
+scene.add(
+    sideLight
+);
+
+
+/* ============================================================
+   FLOOR
+============================================================ */
+
+const floor =
+    new THREE.Mesh(
+
+        new THREE.PlaneGeometry(
+            55,
+            55
+        ),
+
+        new THREE.MeshStandardMaterial({
+
+            color:
+                0x202329,
+
+            roughness:
+                0.95,
+
+            metalness:
+                0.01
+
+        })
+
+    );
+
+floor.rotation.x =
+    -Math.PI *
+    0.5;
+
+floor.receiveShadow =
+    true;
+
+scene.add(
+    floor
+);
+
+
+/* ============================================================
+   GRID
+============================================================ */
+
+const grid =
+    new THREE.GridHelper(
+        50,
+        50,
+        0x414750,
+        0x272b31
+    );
+
+grid.position.y =
+    0.002;
+
+scene.add(
+    grid
+);
+
+
+/* ============================================================
+   TSL MATERIAL
+============================================================ */
+
+const wallMaterial =
+    new THREE.MeshStandardNodeMaterial();
+
+wallMaterial.roughness =
+    0.78;
+
+wallMaterial.metalness =
+    0.025;
+
+
+const heightShade =
+    TSL.clamp(
+
+        TSL.mul(
+            TSL.positionWorld.y,
+            0.055
+        ),
+
+        0,
+        1
+
+    );
+
+
+wallMaterial.colorNode =
+    TSL.mix(
+
+        TSL.color(
+            "#705842"
+        ),
+
+        TSL.color(
+            "#c7a072"
+        ),
+
+        heightShade
+
+    );
+
+
+/* ============================================================
+   INSTANCED WALL
+============================================================ */
+
+const blockGeometry =
+    new THREE.BoxGeometry(
+        BOX_SIZE,
+        BOX_SIZE,
+        BOX_SIZE
+    );
+
+
+const wall =
+    new THREE.InstancedMesh(
+        blockGeometry,
+        wallMaterial,
+        COUNT
+    );
+
+wall.castShadow =
+    true;
+
+wall.receiveShadow =
+    true;
+
+wall.frustumCulled =
+    false;
+
+wall.instanceMatrix.setUsage(
+    THREE.DynamicDrawUsage
+);
+
+scene.add(
+    wall
+);
+
+
+/* ============================================================
+   PHYSICS DATA
+============================================================ */
+
+const positions =
+    new Float32Array(
+        COUNT * 3
+    );
+
+const homePositions =
+    new Float32Array(
+        COUNT * 3
+    );
+
+const velocities =
+    new Float32Array(
+        COUNT * 3
+    );
+
+const angularVelocities =
+    new Float32Array(
+        COUNT * 3
+    );
+
+const quaternions =
+    new Float32Array(
+        COUNT * 4
+    );
+
+
+/*
+    state:
+    0 fixed wall
+    1 active debris
+    2 sleeping debris
+*/
+
+const states =
+    new Uint8Array(
+        COUNT
+    );
+
+const dirty =
+    new Uint8Array(
+        COUNT
+    );
+
+const contacts =
+    new Uint8Array(
+        COUNT
+    );
+
+const sleepFrames =
+    new Uint16Array(
+        COUNT
+    );
+
+const blockColumns =
+    new Uint8Array(
+        COUNT
+    );
+
+const blockRows =
+    new Uint8Array(
+        COUNT
+    );
+
+const blockDepths =
+    new Uint8Array(
+        COUNT
+    );
+
+
+/* ============================================================
+   ACTIVE LIST
+============================================================ */
+
+const activeList =
+    new Int32Array(
+        COUNT
+    );
+
+const activeSlots =
+    new Int32Array(
+        COUNT
+    );
+
+activeSlots.fill(
+    -1
+);
+
+let activeCount =
+    0;
+
+
+/* ============================================================
+   DEBRIS LIST
+============================================================ */
+
+const debrisList =
+    new Int32Array(
+        COUNT
+    );
+
+const debrisRegistered =
+    new Uint8Array(
+        COUNT
+    );
+
+let debrisCount =
+    0;
+
+
+/* ============================================================
+   COLLAPSE QUEUE
+============================================================ */
+
+const pendingList =
+    new Int32Array(
+        COUNT
+    );
+
+const pendingSlots =
+    new Int32Array(
+        COUNT
+    );
+
+pendingSlots.fill(
+    -1
+);
+
+const pendingTimes =
+    new Float32Array(
+        COUNT
+    );
+
+const pendingEnergies =
+    new Float32Array(
+        COUNT
+    );
+
+let pendingCount =
+    0;
+
+
+/* ============================================================
+   SPATIAL HASH
+============================================================ */
+
+const hashHead =
+    new Int32Array(
+        HASH_SIZE
+    );
+
+const hashNext =
+    new Int32Array(
+        COUNT
+    );
+
+const cellX =
+    new Int16Array(
+        COUNT
+    );
+
+const cellY =
+    new Int16Array(
+        COUNT
+    );
+
+const cellZ =
+    new Int16Array(
+        COUNT
+    );
+
+
+/* ============================================================
+   TEMP OBJECTS
+============================================================ */
+
+const dummy =
+    new THREE.Object3D();
+
+const tempDirection =
+    new THREE.Vector3();
+
+const tempVector =
+    new THREE.Vector3();
+
+const tempTextDirection =
+    new THREE.Vector3();
+
+
+/* ============================================================
+   WALL INDEX
+============================================================ */
+
+function getIndex(
+    depth,
+    row,
+    column
+) {
+
+    if (
+        depth < 0 ||
+        depth >= DEPTH ||
+        row < 0 ||
+        row >= ROWS ||
+        column < 0 ||
+        column >= COLS
+    ) {
+
+        return -1;
+
+    }
+
+    return (
+
+        depth *
+        ROWS *
+        COLS
+
+        +
+
+        row *
+        COLS
+
+        +
+
+        column
+
+    );
+
+}
+
+
+/* ============================================================
+   INSTANCE MATRIX
+============================================================ */
+
+function updateInstanceMatrix(
+    index
+) {
+
+    const p =
+        index * 3;
+
+    const q =
+        index * 4;
+
+
+    dummy.position.set(
+
+        positions[p],
+
+        positions[p + 1],
+
+        positions[p + 2]
+
+    );
+
+
+    dummy.quaternion.set(
+
+        quaternions[q],
+
+        quaternions[q + 1],
+
+        quaternions[q + 2],
+
+        quaternions[q + 3]
+
+    );
+
+
+    dummy.scale.set(
+        1,
+        1,
+        1
+    );
+
+
+    dummy.updateMatrix();
+
+
+    wall.setMatrixAt(
+        index,
+        dummy.matrix
+    );
+
+}
+
+
+/* ============================================================
+   BUILD WALL
+============================================================ */
+
+function buildWall() {
+
+    let index =
+        0;
+
+
+    for (
+        let depth = 0;
+        depth < DEPTH;
+        depth++
+    ) {
+
+        for (
+            let row = 0;
+            row < ROWS;
+            row++
+        ) {
+
+            const rowOffset =
+
+                row & 1
+
+                    ? SPACING * 0.5
+
+                    : 0;
+
+
+            for (
+                let column = 0;
+                column < COLS;
+                column++
+            ) {
+
+                const p =
+                    index * 3;
+
+                const q =
+                    index * 4;
+
+
+                const x =
+
+                    (
+                        column -
+
+                        (COLS - 1) *
+                        0.5
+                    )
+
+                    *
+
+                    SPACING
+
+                    +
+
+                    rowOffset;
+
+
+                const y =
+
+                    HALF_BOX
+
+                    +
+
+                    row *
+                    SPACING;
+
+
+                const z =
+
+                    (
+                        depth -
+
+                        (DEPTH - 1) *
+                        0.5
+                    )
+
+                    *
+
+                    SPACING;
+
+
+                positions[p] =
+                    homePositions[p] =
+                    x;
+
+                positions[p + 1] =
+                    homePositions[p + 1] =
+                    y;
+
+                positions[p + 2] =
+                    homePositions[p + 2] =
+                    z;
+
+
+                quaternions[q] =
+                    0;
+
+                quaternions[q + 1] =
+                    0;
+
+                quaternions[q + 2] =
+                    0;
+
+                quaternions[q + 3] =
+                    1;
+
+
+                blockColumns[index] =
+                    column;
+
+                blockRows[index] =
+                    row;
+
+                blockDepths[index] =
+                    depth;
+
+
+                updateInstanceMatrix(
+                    index
+                );
+
+
+                index++;
+
+            }
+
+        }
+
+    }
+
+
+    wall.instanceMatrix.needsUpdate =
+        true;
+
+
+    boxCountElement.textContent =
+        COUNT;
+
+}
+
+buildWall();
+
+
+/* ============================================================
+   PROJECTILE
+============================================================ */
+
+const projectile =
+    new THREE.Mesh(
+
+        new THREE.SphereGeometry(
+            PROJECTILE_RADIUS,
+            24,
+            16
+        ),
+
+        new THREE.MeshStandardMaterial({
+
+            color:
+                0x343d48,
+
+            metalness:
+                0.72,
+
+            roughness:
+                0.20
+
+        })
+
+    );
+
+
+const projectileStart =
+    new THREE.Vector3(
+        0,
+        WALL_HEIGHT * 0.48,
+        12
+    );
+
+
+projectile.position.copy(
+    projectileStart
+);
+
+projectile.castShadow =
+    true;
+
+projectile.receiveShadow =
+    true;
+
+scene.add(
+    projectile
+);
+
+
+const projectileVelocity =
+    new THREE.Vector3();
+
+
+let projectileActive =
+    false;
+
+let firstImpact =
+    false;
+
+let lastProjectileHitIndex =
+    -1;
+
+let lastProjectileHitTime =
+    -100;
+
+
+/* ============================================================
+   AIM
+============================================================ */
+
+const aimPoint =
+    new THREE.Vector3(
+        0,
+        WALL_HEIGHT * 0.48,
+        0
+    );
+
+
+const aimMarker =
+    new THREE.Mesh(
+
+        new THREE.SphereGeometry(
+            0.11,
+            12,
+            8
+        ),
+
+        new THREE.MeshBasicMaterial({
+
+            color:
+                0xffd464,
+
+            depthTest:
+                false
+
+        })
+
+    );
+
+aimMarker.position.copy(
+    aimPoint
+);
+
+aimMarker.renderOrder =
+    70;
+
+scene.add(
+    aimMarker
+);
+
+
+/* ============================================================
+   WORLD-SPACE 3D SPEED TEXT
+
+   Canvas texture is placed on a plane inside the 3D scene.
+
+   Because this object belongs to the Three.js scene,
+   it WILL be included in the recorded video.
+============================================================ */
+
+const speedCanvas =
+    document.createElement(
+        "canvas"
+    );
+
+speedCanvas.width =
+    1024;
+
+speedCanvas.height =
+    320;
+
+
+const speedContext =
+    speedCanvas.getContext(
+        "2d"
+    );
+
+
+const speedTexture =
+    new THREE.CanvasTexture(
+        speedCanvas
+    );
+
+speedTexture.colorSpace =
+    THREE.SRGBColorSpace;
+
+
+const speedTextMaterial =
+    new THREE.MeshBasicMaterial({
+
+        map:
+            speedTexture,
+
+        transparent:
+            true,
+
+        depthTest:
+            false,
+
+        depthWrite:
+            false
+
+    });
+
+
+const speedTextMesh =
+    new THREE.Mesh(
+
+        new THREE.PlaneGeometry(
+            4.8,
+            1.5
+        ),
+
+        speedTextMaterial
+
+    );
+
+
+speedTextMesh.visible =
+    false;
+
+speedTextMesh.renderOrder =
+    100;
+
+scene.add(
+    speedTextMesh
+);
+
+
+let speedTextStartedAt =
+    0;
+
+let speedTextActive =
+    false;
+
+
+/* ============================================================
+   DRAW SPEED TEXT
+============================================================ */
+
+function drawSpeedText(
+    kmh
+) {
+
+    const ctx =
+        speedContext;
+
+    const w =
+        speedCanvas.width;
+
+    const h =
+        speedCanvas.height;
+
+
+    ctx.clearRect(
+        0,
+        0,
+        w,
+        h
+    );
+
+
+    /*
+        Background.
+    */
+
+    const gradient =
+        ctx.createLinearGradient(
+            0,
+            0,
+            w,
+            h
+        );
+
+    gradient.addColorStop(
+        0,
+        "rgba(8,12,18,0.88)"
+    );
+
+    gradient.addColorStop(
+        1,
+        "rgba(20,25,32,0.72)"
+    );
+
+
+    ctx.fillStyle =
+        gradient;
+
+
+    roundRect(
+        ctx,
+        40,
+        35,
+        w - 80,
+        h - 70,
+        45
+    );
+
+    ctx.fill();
+
+
+    ctx.strokeStyle =
+        "rgba(255,211,100,0.85)";
+
+    ctx.lineWidth =
+        5;
+
+    roundRect(
+        ctx,
+        40,
+        35,
+        w - 80,
+        h - 70,
+        45
+    );
+
+    ctx.stroke();
+
+
+    /*
+        Glow.
+    */
+
+    ctx.textAlign =
+        "center";
+
+    ctx.textBaseline =
+        "middle";
+
+
+    ctx.shadowColor =
+        "rgba(255,198,70,0.75)";
+
+    ctx.shadowBlur =
+        26;
+
+
+    ctx.fillStyle =
+        "#FFD971";
+
+    ctx.font =
+        "900 120px Arial";
+
+
+    ctx.fillText(
+        `${kmh} km/h`,
+        w / 2,
+        145
+    );
+
+
+    ctx.shadowBlur =
+        0;
+
+
+    ctx.fillStyle =
+        "rgba(255,255,255,0.72)";
+
+    ctx.font =
+        "700 34px Arial";
+
+    ctx.letterSpacing =
+        "4px";
+
+
+    ctx.fillText(
+        "LAUNCH SPEED",
+        w / 2,
+        245
+    );
+
+
+    speedTexture.needsUpdate =
+        true;
+
+}
+
+
+/* ============================================================
+   CANVAS ROUND RECT
+============================================================ */
+
+function roundRect(
+    ctx,
+    x,
+    y,
+    width,
+    height,
+    radius
+) {
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        x,
+        y,
+        width,
+        height,
+        radius
+    );
+
+}
+
+
+/* ============================================================
+   SPEED TEXT POSITION
+============================================================ */
+
+function showSpeedText(
+    kmh
+) {
+
+    drawSpeedText(
+        kmh
+    );
+
+
+    /*
+        Put label slightly above aim point.
+    */
+
+    speedTextMesh.position.copy(
+        aimPoint
+    );
+
+
+    speedTextMesh.position.y =
+        Math.min(
+
+            WALL_HEIGHT -
+            0.6,
+
+            aimPoint.y +
+            1.15
+
+        );
+
+
+    /*
+        Move it toward current camera so wall does
+        not clip through it.
+    */
+
+    tempTextDirection
+        .subVectors(
+
+            camera.position,
+
+            speedTextMesh.position
+
+        )
+        .normalize()
+        .multiplyScalar(
+            0.8
+        );
+
+
+    speedTextMesh.position.add(
+        tempTextDirection
+    );
+
+
+    speedTextMesh.scale.set(
+        0.75,
+        0.75,
+        0.75
+    );
+
+
+    speedTextMaterial.opacity =
+        1;
+
+
+    speedTextMesh.visible =
+        true;
+
+
+    speedTextActive =
+        true;
+
+
+    speedTextStartedAt =
+        performance.now();
+
+}
+
+
+/* ============================================================
+   UPDATE SPEED TEXT
+============================================================ */
+
+function updateSpeedText(
+    now
+) {
+
+    if (
+        !speedTextActive
+    ) {
+        return;
+    }
+
+
+    /*
+        Always face camera.
+    */
+
+    speedTextMesh.lookAt(
+        camera.position
+    );
+
+
+    const age =
+
+        (
+            now -
+            speedTextStartedAt
+        )
+
+        /
+
+        1000;
+
+
+    /*
+        Small entrance animation.
+    */
+
+    if (
+        age <
+        0.20
+    ) {
+
+        const t =
+            age /
+            0.20;
+
+
+        const scale =
+
+            0.55
+
+            +
+
+            t *
+            0.45;
+
+
+        speedTextMesh.scale.setScalar(
+            scale
+        );
+
+    }
+
+    else {
+
+        speedTextMesh.scale.setScalar(
+            1
+        );
+
+    }
+
+
+    /*
+        Projectile launches after one second.
+
+        Keep text briefly visible and fade it.
+    */
+
+    if (
+        age >
+        1.05
+    ) {
+
+        const fade =
+
+            1
+
+            -
+
+            (
+                age -
+                1.05
+            )
+
+            /
+
+            0.65;
+
+
+        speedTextMaterial.opacity =
+
+            Math.max(
+                0,
+                fade
+            );
+
+    }
+
+
+    if (
+        age >
+        1.70
+    ) {
+
+        speedTextMesh.visible =
+            false;
+
+
+        speedTextActive =
+            false;
+
+
+        speedTextMaterial.opacity =
+            1;
+
+    }
+
+}
+
+
+/* ============================================================
+   RANDOM
+============================================================ */
+
+function randomSigned() {
+
+    return (
+        Math.random() *
+        2 -
+        1
+    );
+
+}
+
+
+/* ============================================================
+   ACTIVE LIST
+============================================================ */
+
+function addActive(
+    index
+) {
+
+    if (
+        activeSlots[index] !==
+        -1
+    ) {
+        return;
+    }
+
+
+    activeSlots[index] =
+        activeCount;
+
+
+    activeList[
+        activeCount
+    ] =
+        index;
+
+
+    activeCount++;
+
+}
+
+
+function removeActive(
+    index
+) {
+
+    const slot =
+        activeSlots[index];
+
+
+    if (
+        slot ===
+        -1
+    ) {
+        return;
+    }
+
+
+    const lastSlot =
+        activeCount -
+        1;
+
+
+    const lastIndex =
+        activeList[
+            lastSlot
+        ];
+
+
+    activeList[slot] =
+        lastIndex;
+
+
+    activeSlots[lastIndex] =
+        slot;
+
+
+    activeCount--;
+
+
+    activeSlots[index] =
+        -1;
+
+}
+
+
+/* ============================================================
+   SIMULATION
+============================================================ */
+
+let simulationTime =
+    0;
+
+
+/* ============================================================
+   COLLAPSE QUEUE
+============================================================ */
+
+function scheduleWake(
+    index,
+    time,
+    energy
+) {
+
+    if (
+        index < 0 ||
+        states[index] !== 0
+    ) {
+        return;
+    }
+
+
+    const slot =
+        pendingSlots[index];
+
+
+    if (
+        slot !==
+        -1
+    ) {
+
+        pendingTimes[index] =
+
+            Math.min(
+                pendingTimes[index],
+                time
+            );
+
+
+        pendingEnergies[index] =
+
+            Math.max(
+                pendingEnergies[index],
+                energy
+            );
+
+
+        return;
+
+    }
+
+
+    pendingSlots[index] =
+        pendingCount;
+
+
+    pendingList[
+        pendingCount
+    ] =
+        index;
+
+
+    pendingCount++;
+
+
+    pendingTimes[index] =
+        time;
+
+
+    pendingEnergies[index] =
+        energy;
+
+}
+
+
+function removePendingAt(
+    slot
+) {
+
+    const removed =
+        pendingList[
+            slot
+        ];
+
+
+    const lastSlot =
+        pendingCount -
+        1;
+
+
+    const last =
+        pendingList[
+            lastSlot
+        ];
+
+
+    pendingList[slot] =
+        last;
+
+
+    pendingSlots[last] =
+        slot;
+
+
+    pendingCount--;
+
+
+    pendingSlots[removed] =
+        -1;
+
+}
+
+
+/* ============================================================
+   BREAK BLOCK
+============================================================ */
+
+function wakeBlock(
+    index,
+    vx = 0,
+    vy = 0,
+    vz = 0,
+    energy = 0
+) {
+
+    if (
+        index < 0 ||
+        states[index] === 1
+    ) {
+        return;
+    }
+
+
+    if (
+        !debrisRegistered[index]
+    ) {
+
+        debrisRegistered[index] =
+            1;
+
+
+        debrisList[
+            debrisCount
+        ] =
+            index;
+
+
+        debrisCount++;
+
+    }
+
+
+    states[index] =
+        1;
+
+
+    addActive(
+        index
+    );
+
+
+    const p =
+        index * 3;
+
+
+    velocities[p] +=
+
+        vx +
+        randomSigned() *
+        0.12;
+
+
+    velocities[p + 1] +=
+
+        vy +
+        Math.random() *
+        0.12;
+
+
+    velocities[p + 2] +=
+
+        vz +
+        randomSigned() *
+        0.12;
+
+
+    const spin =
+
+        2
+
+        +
+
+        Math.min(
+
+            9,
+
+            Math.abs(vx) +
+            Math.abs(vy) +
+            Math.abs(vz)
+
+        )
+
+        *
+
+        0.20;
+
+
+    angularVelocities[p] =
+        randomSigned() *
+        spin;
+
+    angularVelocities[p + 1] =
+        randomSigned() *
+        spin;
+
+    angularVelocities[p + 2] =
+        randomSigned() *
+        spin;
+
+
+    sleepFrames[index] =
+        0;
+
+    dirty[index] =
+        1;
+
+
+    if (
+        energy <=
+        0.55
+    ) {
+        return;
+    }
+
+
+    const column =
+        blockColumns[index];
+
+    const row =
+        blockRows[index];
+
+    const depth =
+        blockDepths[index];
+
+
+    /*
+        Structural collapse upward.
+    */
+
+    for (
+        let offset = -1;
+        offset <= 1;
+        offset++
+    ) {
+
+        if (
+            offset !== 0 &&
+            Math.random() > 0.48
+        ) {
+            continue;
+        }
+
+
+        const above =
+            getIndex(
+
+                depth,
+
+                row + 1,
+
+                column +
+                offset
+
+            );
+
+
+        if (
+            above <
+            0
+        ) {
+            continue;
+        }
+
+
+        const nextEnergy =
+
+            energy
+
+            *
+
+            (
+                offset === 0
+                    ? 0.70
+                    : 0.48
+            );
+
+
+        scheduleWake(
+
+            above,
+
+            simulationTime +
+            0.06 +
+            Math.random() *
+            0.25,
+
+            nextEnergy
+
+        );
+
+    }
+
+
+    /*
+        Damage through wall depth.
+    */
+
+    if (
+        Math.random() <
+        0.30
+    ) {
+
+        const nextDepth =
+
+            depth
+
+            +
+
+            (
+                Math.random() >
+                0.5
+
+                    ? 1
+
+                    : -1
+            );
+
+
+        const deeper =
+            getIndex(
+
+                nextDepth,
+
+                row,
+
+                column
+
+            );
+
+
+        if (
+            deeper >=
+            0
+        ) {
+
+            scheduleWake(
+
+                deeper,
+
+                simulationTime +
+                0.08 +
+                Math.random() *
+                0.20,
+
+                energy *
+                0.48
+
+            );
+
+        }
+
+    }
+
+}
+
+
+/* ============================================================
+   PROCESS COLLAPSE
+============================================================ */
+
+function processCollapseQueue() {
+
+    let slot =
+        0;
+
+
+    while (
+        slot <
+        pendingCount
+    ) {
+
+        const index =
+            pendingList[
+                slot
+            ];
+
+
+        if (
+            states[index] !==
+            0
+        ) {
+
+            removePendingAt(
+                slot
+            );
+
+            continue;
+
+        }
+
+
+        if (
+            simulationTime <
+            pendingTimes[index]
+        ) {
+
+            slot++;
+
+            continue;
+
+        }
+
+
+        const energy =
+            pendingEnergies[index];
+
+
+        removePendingAt(
+            slot
+        );
+
+
+        wakeBlock(
+
+            index,
+
+            randomSigned() *
+            energy *
+            0.25,
+
+            Math.random() *
+            0.20,
+
+            randomSigned() *
+            energy *
+            0.35,
+
+            energy
+
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   IMPACT
+
+   Actual projectile speed controls destruction.
+
+   Faster projectile = greater debris velocity.
+============================================================ */
+
+function explodeImpact(
+    hitIndex
+) {
+
+    const hp =
+        hitIndex * 3;
+
+
+    const cx =
+        homePositions[hp];
+
+    const cy =
+        homePositions[
+            hp + 1
+        ];
+
+    const cz =
+        homePositions[
+            hp + 2
+        ];
+
+
+    const radius =
+        2.25;
+
+
+    tempDirection
+        .copy(
+            projectileVelocity
+        )
+        .normalize();
+
+
+    const speedMps =
+        projectileVelocity.length();
+
+
+    /*
+        50 m/s = roughly 180 km/h.
+
+        Use speed directly to influence physical
+        destruction momentum.
+    */
+
+    const speedFactor =
+        THREE.MathUtils.clamp(
+
+            speedMps /
+            50,
+
+            0.25,
+
+            2.0
+
+        );
+
+
+    for (
+        let index = 0;
+        index < COUNT;
+        index++
+    ) {
+
+        if (
+            states[index] !== 0
+        ) {
+            continue;
+        }
+
+
+        const p =
+            index * 3;
+
+
+        let dx =
+            homePositions[p] -
+            cx;
+
+        let dy =
+            homePositions[p + 1] -
+            cy;
+
+        let dz =
+            homePositions[p + 2] -
+            cz;
+
+
+        const distanceSquared =
+
+            dx * dx +
+            dy * dy +
+            dz * dz;
+
+
+        if (
+            distanceSquared >
+            radius *
+            radius
+        ) {
+            continue;
+        }
+
+
+        const distance =
+            Math.sqrt(
+                distanceSquared
+            );
+
+
+        const strength =
+
+            1 -
+
+            distance /
+            radius;
+
+
+        /*
+            Faster speed increases probability
+            of outer cubes breaking.
+        */
+
+        const breakChance =
+
+            0.18
+
+            +
+
+            strength *
+            0.70
+
+            +
+
+            speedFactor *
+            0.10;
+
+
+        if (
+            Math.random() >
+            breakChance
+        ) {
+            continue;
+        }
+
+
+        const len =
+            Math.max(
+                distance,
+                0.001
+            );
+
+
+        dx /= len;
+        dy /= len;
+        dz /= len;
+
+
+        const force =
+
+            (
+                3.0
+
+                +
+
+                strength *
+                7.5
+            )
+
+            *
+
+            speedFactor;
+
+
+        wakeBlock(
+
+            index,
+
+
+            tempDirection.x *
+            force *
+            0.82
+
+            +
+
+            dx *
+            strength *
+            2.0,
+
+
+            tempDirection.y *
+            force *
+            0.35
+
+            +
+
+            dy *
+            strength *
+            1.4
+
+            +
+
+            Math.random() *
+            strength *
+            0.8,
+
+
+            tempDirection.z *
+            force *
+            0.92
+
+            +
+
+            dz *
+            strength *
+            2.0,
+
+
+            0.8
+
+            +
+
+            strength *
+            3.3 *
+            speedFactor
+
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   QUATERNION
+============================================================ */
+
+function integrateQuaternion(
+    index,
+    dt
+) {
+
+    const p =
+        index * 3;
+
+    const q =
+        index * 4;
+
+
+    const ox =
+        quaternions[q];
+
+    const oy =
+        quaternions[q + 1];
+
+    const oz =
+        quaternions[q + 2];
+
+    const ow =
+        quaternions[q + 3];
+
+
+    const wx =
+        angularVelocities[p];
+
+    const wy =
+        angularVelocities[p + 1];
+
+    const wz =
+        angularVelocities[p + 2];
+
+
+    const halfDT =
+        dt * 0.5;
+
+
+    let x =
+
+        ox +
+
+        (
+            wx * ow +
+            wy * oz -
+            wz * oy
+        ) *
+        halfDT;
+
+
+    let y =
+
+        oy +
+
+        (
+            -wx * oz +
+            wy * ow +
+            wz * ox
+        ) *
+        halfDT;
+
+
+    let z =
+
+        oz +
+
+        (
+            wx * oy -
+            wy * ox +
+            wz * ow
+        ) *
+        halfDT;
+
+
+    let w =
+
+        ow +
+
+        (
+            -wx * ox -
+            wy * oy -
+            wz * oz
+        ) *
+        halfDT;
+
+
+    const inv =
+
+        1 /
+
+        Math.sqrt(
+
+            x*x +
+            y*y +
+            z*z +
+            w*w
+
+        );
+
+
+    quaternions[q] =
+        x * inv;
+
+    quaternions[q + 1] =
+        y * inv;
+
+    quaternions[q + 2] =
+        z * inv;
+
+    quaternions[q + 3] =
+        w * inv;
+
+}
+
+
+/* ============================================================
+   HASH
+============================================================ */
+
+function hashCell(
+    x,
+    y,
+    z
+) {
+
+    return (
+
+        (
+            Math.imul(
+                x,
+                73856093
+            )
+
+            ^
+
+            Math.imul(
+                y,
+                19349663
+            )
+
+            ^
+
+            Math.imul(
+                z,
+                83492791
+            )
+        )
+
+        &
+
+        HASH_MASK
+
+    );
+
+}
+
+
+function buildSpatialHash() {
+
+    hashHead.fill(
+        -1
+    );
+
+
+    for (
+        let n = 0;
+        n < debrisCount;
+        n++
+    ) {
+
+        const index =
+            debrisList[n];
+
+
+        if (
+            states[index] ===
+            0
+        ) {
+            continue;
+        }
+
+
+        const p =
+            index * 3;
+
+
+        const x =
+            Math.floor(
+
+                positions[p] /
+                HASH_CELL_SIZE
+
+            );
+
+
+        const y =
+            Math.floor(
+
+                positions[p + 1] /
+                HASH_CELL_SIZE
+
+            );
+
+
+        const z =
+            Math.floor(
+
+                positions[p + 2] /
+                HASH_CELL_SIZE
+
+            );
+
+
+        cellX[index] =
+            x;
+
+        cellY[index] =
+            y;
+
+        cellZ[index] =
+            z;
+
+
+        const hash =
+            hashCell(
+                x,
+                y,
+                z
+            );
+
+
+        hashNext[index] =
+            hashHead[hash];
+
+
+        hashHead[hash] =
+            index;
+
+    }
+
+}
+
+
+/* ============================================================
+   DEBRIS COLLISION
+============================================================ */
+
+function solvePair(
+    a,
+    b
+) {
+
+    const ap =
+        a * 3;
+
+    const bp =
+        b * 3;
+
+
+    let dx =
+        positions[bp] -
+        positions[ap];
+
+    let dy =
+        positions[bp + 1] -
+        positions[ap + 1];
+
+    let dz =
+        positions[bp + 2] -
+        positions[ap + 2];
+
+
+    const d2 =
+
+        dx*dx +
+        dy*dy +
+        dz*dz;
+
+
+    if (
+        d2 >=
+        BLOCK_DIAMETER *
+        BLOCK_DIAMETER
+    ) {
+        return;
+    }
+
+
+    let distance =
+        Math.sqrt(
+            d2
+        );
+
+
+    if (
+        distance <
+        0.0001
+    ) {
+
+        dx =
+            randomSigned();
+
+        dy =
+            0.5;
+
+        dz =
+            randomSigned();
+
+
+        distance =
+            Math.sqrt(
+
+                dx*dx +
+                dy*dy +
+                dz*dz
+
+            );
+
+    }
+
+
+    const nx =
+        dx / distance;
+
+    const ny =
+        dy / distance;
+
+    const nz =
+        dz / distance;
+
+
+    if (
+        states[b] ===
+        2
+    ) {
+
+        const speedSquared =
+
+            velocities[ap] *
+            velocities[ap]
+
+            +
+
+            velocities[ap + 1] *
+            velocities[ap + 1]
+
+            +
+
+            velocities[ap + 2] *
+            velocities[ap + 2];
+
+
+        if (
+            speedSquared >
+            1
+        ) {
+
+            states[b] =
+                1;
+
+            addActive(
+                b
+            );
+
+        }
+
+    }
+
+
+    const inverseMassA =
+
+        states[a] === 1
+            ? 1
+            : 0;
+
+
+    const inverseMassB =
+
+        states[b] === 1
+            ? 1
+            : 0;
+
+
+    const total =
+
+        inverseMassA +
+        inverseMassB;
+
+
+    if (
+        total ===
+        0
+    ) {
+        return;
+    }
+
+
+    const penetration =
+
+        BLOCK_DIAMETER -
+        distance;
+
+
+    const correction =
+
+        penetration *
+        0.48 /
+        total;
+
+
+    if (
+        inverseMassA
+    ) {
+
+        positions[ap] -=
+            nx *
+            correction;
+
+        positions[ap + 1] -=
+            ny *
+            correction;
+
+        positions[ap + 2] -=
+            nz *
+            correction;
+
+        dirty[a] =
+            1;
+
+    }
+
+
+    if (
+        inverseMassB
+    ) {
+
+        positions[bp] +=
+            nx *
+            correction;
+
+        positions[bp + 1] +=
+            ny *
+            correction;
+
+        positions[bp + 2] +=
+            nz *
+            correction;
+
+        dirty[b] =
+            1;
+
+    }
+
+
+    const rvx =
+        velocities[bp] -
+        velocities[ap];
+
+    const rvy =
+        velocities[bp + 1] -
+        velocities[ap + 1];
+
+    const rvz =
+        velocities[bp + 2] -
+        velocities[ap + 2];
+
+
+    const normalVelocity =
+
+        rvx * nx +
+        rvy * ny +
+        rvz * nz;
+
+
+    if (
+        normalVelocity >
+        0
+    ) {
+
+        contacts[a] =
+            1;
+
+        contacts[b] =
+            1;
+
+        return;
+
+    }
+
+
+    const impulse =
+
+        -1.12 *
+        normalVelocity /
+        total;
+
+
+    if (
+        inverseMassA
+    ) {
+
+        velocities[ap] -=
+            impulse * nx;
+
+        velocities[ap + 1] -=
+            impulse * ny;
+
+        velocities[ap + 2] -=
+            impulse * nz;
+
+    }
+
+
+    if (
+        inverseMassB
+    ) {
+
+        velocities[bp] +=
+            impulse * nx;
+
+        velocities[bp + 1] +=
+            impulse * ny;
+
+        velocities[bp + 2] +=
+            impulse * nz;
+
+    }
+
+
+    contacts[a] =
+        1;
+
+    contacts[b] =
+        1;
+
+}
+
+
+/* ============================================================
+   COLLISION PASS
+============================================================ */
+
+function solveDebrisCollisions() {
+
+    buildSpatialHash();
+
+
+    for (
+        let slot = 0;
+        slot < activeCount;
+        slot++
+    ) {
+
+        const a =
+            activeList[slot];
+
+
+        const x =
+            cellX[a];
+
+        const y =
+            cellY[a];
+
+        const z =
+            cellZ[a];
+
+
+        for (
+            let ox = -1;
+            ox <= 1;
+            ox++
+        ) {
+
+            for (
+                let oy = -1;
+                oy <= 1;
+                oy++
+            ) {
+
+                for (
+                    let oz = -1;
+                    oz <= 1;
+                    oz++
+                ) {
+
+                    const tx =
+                        x + ox;
+
+                    const ty =
+                        y + oy;
+
+                    const tz =
+                        z + oz;
+
+
+                    const hash =
+                        hashCell(
+                            tx,
+                            ty,
+                            tz
+                        );
+
+
+                    let b =
+                        hashHead[hash];
+
+
+                    while (
+                        b !==
+                        -1
+                    ) {
+
+                        if (
+                            b !== a &&
+
+                            cellX[b] === tx &&
+
+                            cellY[b] === ty &&
+
+                            cellZ[b] === tz
+                        ) {
+
+                            if (
+                                !(
+                                    states[b] === 1 &&
+                                    b < a
+                                )
+                            ) {
+
+                                solvePair(
+                                    a,
+                                    b
+                                );
+
+                            }
+
+                        }
+
+
+                        b =
+                            hashNext[b];
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+}
+
+
+/* ============================================================
+   DEBRIS PHYSICS
+============================================================ */
+
+function integrateBlocks(
+    dt
+) {
+
+    contacts.fill(
+        0
+    );
+
+
+    for (
+        let slot = 0;
+        slot < activeCount;
+        slot++
+    ) {
+
+        const index =
+            activeList[slot];
+
+
+        const p =
+            index * 3;
+
+
+        velocities[p + 1] +=
+
+            GRAVITY *
+            dt;
+
+
+        velocities[p] *=
+            AIR_DRAG;
+
+        velocities[p + 1] *=
+            AIR_DRAG;
+
+        velocities[p + 2] *=
+            AIR_DRAG;
+
+
+        angularVelocities[p] *=
+            0.996;
+
+        angularVelocities[p + 1] *=
+            0.996;
+
+        angularVelocities[p + 2] *=
+            0.996;
+
+
+        positions[p] +=
+            velocities[p] *
+            dt;
+
+        positions[p + 1] +=
+            velocities[p + 1] *
+            dt;
+
+        positions[p + 2] +=
+            velocities[p + 2] *
+            dt;
+
+
+        integrateQuaternion(
+            index,
+            dt
+        );
+
+
+        /*
+            Floor.
+        */
+
+        if (
+            positions[p + 1] <
+            HALF_BOX
+        ) {
+
+            positions[p + 1] =
+                HALF_BOX;
+
+
+            if (
+                velocities[p + 1] <
+                0
+            ) {
+
+                velocities[p + 1] =
+
+                    -velocities[p + 1]
+
+                    *
+
+                    GROUND_RESTITUTION;
+
+            }
+
+
+            velocities[p] *=
+                GROUND_FRICTION;
+
+            velocities[p + 2] *=
+                GROUND_FRICTION;
+
+
+            angularVelocities[p] *=
+                0.80;
+
+            angularVelocities[p + 1] *=
+                0.80;
+
+            angularVelocities[p + 2] *=
+                0.80;
+
+
+            contacts[index] =
+                1;
+
+        }
+
+
+        dirty[index] =
+            1;
+
+    }
+
+
+    if (
+        activeCount >
+        1
+    ) {
+
+        solveDebrisCollisions();
+
+    }
+
+
+    /*
+        Sleep settled debris.
+    */
+
+    let slot =
+        0;
+
+
+    while (
+        slot <
+        activeCount
+    ) {
+
+        const index =
+            activeList[slot];
+
+
+        const p =
+            index * 3;
+
+
+        const speedSquared =
+
+            velocities[p] *
+            velocities[p]
+
+            +
+
+            velocities[p + 1] *
+            velocities[p + 1]
+
+            +
+
+            velocities[p + 2] *
+            velocities[p + 2];
+
+
+        const spinSquared =
+
+            angularVelocities[p] *
+            angularVelocities[p]
+
+            +
+
+            angularVelocities[p + 1] *
+            angularVelocities[p + 1]
+
+            +
+
+            angularVelocities[p + 2] *
+            angularVelocities[p + 2];
+
+
+        if (
+            contacts[index] &&
+
+            speedSquared <
+            0.022 &&
+
+            spinSquared <
+            0.08
+        ) {
+
+            sleepFrames[index]++;
+
+        }
+
+        else {
+
+            sleepFrames[index] =
+                0;
+
+        }
+
+
+        if (
+            sleepFrames[index] >
+            45
+        ) {
+
+            states[index] =
+                2;
+
+
+            velocities[p] =
+                0;
+
+            velocities[p + 1] =
+                0;
+
+            velocities[p + 2] =
+                0;
+
+
+            angularVelocities[p] =
+                0;
+
+            angularVelocities[p + 1] =
+                0;
+
+            angularVelocities[p + 2] =
+                0;
+
+
+            removeActive(
+                index
+            );
+
+
+            continue;
+
+        }
+
+
+        slot++;
+
+    }
+
+}
+
+
+/* ============================================================
+   PROJECTILE COLLISION
+
+   Called during adaptive high-speed substeps.
+============================================================ */
+
+function projectileCollision() {
+
+    if (
+        Math.abs(
+            projectile.position.z
+        ) >
+        2.5
+    ) {
+
+        return;
+
+    }
+
+
+    const combinedRadius =
+
+        PROJECTILE_RADIUS +
+        BLOCK_RADIUS;
+
+
+    const radiusSquared =
+
+        combinedRadius *
+        combinedRadius;
+
+
+    let nearest =
+        -1;
+
+    let nearestDistance =
+        Infinity;
+
+
+    for (
+        let index = 0;
+        index < COUNT;
+        index++
+    ) {
+
+        const p =
+            index * 3;
+
+
+        const dx =
+
+            projectile.position.x -
+            positions[p];
+
+
+        const dy =
+
+            projectile.position.y -
+            positions[p + 1];
+
+
+        const dz =
+
+            projectile.position.z -
+            positions[p + 2];
+
+
+        const d2 =
+
+            dx*dx +
+            dy*dy +
+            dz*dz;
+
+
+        if (
+            d2 <
+            radiusSquared &&
+
+            d2 <
+            nearestDistance
+        ) {
+
+            nearest =
+                index;
+
+            nearestDistance =
+                d2;
+
+        }
+
+    }
+
+
+    if (
+        nearest ===
+        -1
+    ) {
+        return;
+    }
+
+
+    if (
+        !firstImpact
+    ) {
+
+        firstImpact =
+            true;
+
+
+        explodeImpact(
+            nearest
+        );
+
+    }
+
+
+    if (
+        states[nearest] ===
+        0
+    ) {
+
+        wakeBlock(
+
+            nearest,
+
+            projectileVelocity.x *
+            0.25,
+
+            projectileVelocity.y *
+            0.25,
+
+            projectileVelocity.z *
+            0.25,
+
+            1.7
+
+        );
+
+    }
+
+
+    /*
+        Avoid damping against same cube every tiny
+        projectile substep.
+    */
+
+    if (
+        nearest !==
+        lastProjectileHitIndex ||
+
+        simulationTime -
+        lastProjectileHitTime >
+        0.045
+    ) {
+
+        projectileVelocity.multiplyScalar(
+            0.92
+        );
+
+
+        lastProjectileHitIndex =
+            nearest;
+
+
+        lastProjectileHitTime =
+            simulationTime;
+
+    }
+
+}
+
+
+/* ============================================================
+   REAL-SPEED PROJECTILE
+
+   Adaptive substeps prevent tunnelling at high km/h.
+============================================================ */
+
+function integrateProjectile(
+    dt
+) {
+
+    if (
+        !projectileActive
+    ) {
+        return;
+    }
+
+
+    const speed =
+        projectileVelocity.length();
+
+
+    const travelDistance =
+
+        speed *
+        dt;
+
+
+    const substeps =
+
+        Math.min(
+
+            MAX_PROJECTILE_SUBSTEPS,
+
+            Math.max(
+
+                1,
+
+                Math.ceil(
+
+                    travelDistance
+
+                    /
+
+                    PROJECTILE_MAX_STEP_DISTANCE
+
+                )
+
+            )
+
+        );
+
+
+    const subDT =
+        dt /
+        substeps;
+
+
+    for (
+        let i = 0;
+        i < substeps;
+        i++
+    ) {
+
+        projectileVelocity.y +=
+
+            GRAVITY *
+            subDT;
+
+
+        /*
+            Tiny aerodynamic drag.
+        */
+
+        projectileVelocity.multiplyScalar(
+            0.9998
+        );
+
+
+        projectile.position.addScaledVector(
+
+            projectileVelocity,
+
+            subDT
+
+        );
+
+
+        projectileCollision();
+
+
+        /*
+            Ground.
+        */
+
+        if (
+            projectile.position.y <
+            PROJECTILE_RADIUS
+        ) {
+
+            projectile.position.y =
+                PROJECTILE_RADIUS;
+
+
+            if (
+                projectileVelocity.y <
+                0
+            ) {
+
+                projectileVelocity.y *=
+                    -0.38;
+
+            }
+
+
+            projectileVelocity.x *=
+                0.78;
+
+            projectileVelocity.z *=
+                0.78;
+
+
+            if (
+                projectileVelocity.lengthSq() <
+                0.03
+            ) {
+
+                projectileActive =
+                    false;
+
+                break;
+
+            }
+
+        }
+
+
+        if (
+            Math.abs(
+                projectile.position.z
+            ) >
+            35 ||
+
+            Math.abs(
+                projectile.position.x
+            ) >
+            35
+        ) {
+
+            projectileActive =
+                false;
+
+            break;
+
+        }
+
+    }
+
+}
+
+
+/* ============================================================
+   PHYSICS STEP
+============================================================ */
+
+function physicsStep(
+    dt
+) {
+
+    simulationTime +=
+        dt;
+
+
+    processCollapseQueue();
+
+
+    integrateProjectile(
+        dt
+    );
+
+
+    if (
+        activeCount >
+        0
+    ) {
+
+        integrateBlocks(
+            dt
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   INSTANCE SYNC
+============================================================ */
+
+function syncInstanceMatrices() {
+
+    let changed =
+        false;
+
+
+    for (
+        let n = 0;
+        n < debrisCount;
+        n++
+    ) {
+
+        const index =
+            debrisList[n];
+
+
+        if (
+            !dirty[index]
+        ) {
+            continue;
+        }
+
+
+        updateInstanceMatrix(
+            index
+        );
+
+
+        dirty[index] =
+            0;
+
+
+        changed =
+            true;
+
+    }
+
+
+    if (
+        changed
+    ) {
+
+        wall.instanceMatrix.needsUpdate =
+            true;
+
+    }
+
+}
+
+
+/* ============================================================
+   SPEED UI
+============================================================ */
+
+function updateSpeedUI() {
+
+    const kmh =
+        Number(
+            speedSlider.value
+        );
+
+
+    const mps =
+        kmh *
+        KMH_TO_MS;
+
+
+    speedValueElement.textContent =
+        kmh;
+
+
+    speedMSElement.textContent =
+
+        `${mps.toFixed(1)} m/s`;
+
+}
+
+
+speedSlider.addEventListener(
+
+    "input",
+
+    updateSpeedUI
+
+);
+
+
+updateSpeedUI();
+
+
+/* ============================================================
+   1 SECOND LAUNCH SEQUENCE
+============================================================ */
+
+let launchPending =
+    false;
+
+let pendingLaunchTime =
+    0;
+
+let pendingLaunchSpeedKmh =
+    0;
+
+let pendingLaunchSpeedMps =
+    0;
+
+
+/* ============================================================
+   REQUEST LAUNCH
+
+   1. Show 3D speed text.
+   2. Wait exactly 1 second.
+   3. Fire at selected km/h.
+============================================================ */
+
+function requestLaunch() {
+
+    if (
+        launchPending
+    ) {
+        return;
+    }
+
+
+    const kmh =
+        Number(
+            speedSlider.value
+        );
+
+
+    const mps =
+
+        kmh *
+        KMH_TO_MS;
+
+
+    pendingLaunchSpeedKmh =
+        kmh;
+
+
+    pendingLaunchSpeedMps =
+        mps;
+
+
+    /*
+        Show speed in the 3D world immediately.
+    */
+
+    showSpeedText(
+        kmh
+    );
+
+
+    launchPending =
+        true;
+
+
+    pendingLaunchTime =
+
+        performance.now()
+
+        +
+
+        1000;
+
+
+    launchButton.disabled =
+        true;
+
+
+    launchButton.textContent =
+
+        `${kmh} KM/H • LAUNCHING...`;
+
+}
+
+
+/* ============================================================
+   FIRE
+============================================================ */
+
+function fireProjectile(
+    speedMps
+) {
+
+    projectile.position.copy(
+        projectileStart
+    );
+
+
+    tempDirection
+        .subVectors(
+
+            aimPoint,
+
+            projectileStart
+
+        )
+        .normalize();
+
+
+    /*
+        Real physical launch speed.
+
+        Example:
+        180 km/h = 50 m/s.
+    */
+
+    projectileVelocity
+
+        .copy(
+            tempDirection
+        )
+
+        .multiplyScalar(
+            speedMps
+        );
+
+
+    projectileActive =
+        true;
+
+
+    firstImpact =
+        false;
+
+
+    lastProjectileHitIndex =
+        -1;
+
+
+    lastProjectileHitTime =
+        -100;
+
+
+    aimMarker.visible =
+        false;
+
+}
+
+
+/* ============================================================
+   UPDATE LAUNCH SEQUENCE
+============================================================ */
+
+function updateLaunchSequence(
+    now
+) {
+
+    if (
+        !launchPending
+    ) {
+        return;
+    }
+
+
+    if (
+        now <
+        pendingLaunchTime
+    ) {
+
+        const remaining =
+
+            Math.max(
+
+                0,
+
+                (
+                    pendingLaunchTime -
+                    now
+                )
+
+                /
+
+                1000
+
+            );
+
+
+        launchButton.textContent =
+
+            `${pendingLaunchSpeedKmh} KM/H • ${remaining.toFixed(1)}s`;
+
+
+        return;
+
+    }
+
+
+    fireProjectile(
+        pendingLaunchSpeedMps
+    );
+
+
+    launchPending =
+        false;
+
+
+    launchButton.disabled =
+        false;
+
+
+    launchButton.textContent =
+        "LAUNCH";
+
+}
+
+
+/* ============================================================
+   RESET WALL
+============================================================ */
+
+function resetWall() {
+
+    launchPending =
+        false;
+
+
+    launchButton.disabled =
+        false;
+
+
+    launchButton.textContent =
+        "LAUNCH";
+
+
+    speedTextActive =
+        false;
+
+
+    speedTextMesh.visible =
+        false;
+
+
+    activeCount =
+        0;
+
+    debrisCount =
+        0;
+
+    pendingCount =
+        0;
+
+    simulationTime =
+        0;
+
+
+    activeSlots.fill(
+        -1
+    );
+
+    pendingSlots.fill(
+        -1
+    );
+
+    debrisRegistered.fill(
+        0
+    );
+
+
+    for (
+        let index = 0;
+        index < COUNT;
+        index++
+    ) {
+
+        const p =
+            index * 3;
+
+        const q =
+            index * 4;
+
+
+        positions[p] =
+            homePositions[p];
+
+        positions[p + 1] =
+            homePositions[p + 1];
+
+        positions[p + 2] =
+            homePositions[p + 2];
+
+
+        velocities[p] =
+            0;
+
+        velocities[p + 1] =
+            0;
+
+        velocities[p + 2] =
+            0;
+
+
+        angularVelocities[p] =
+            0;
+
+        angularVelocities[p + 1] =
+            0;
+
+        angularVelocities[p + 2] =
+            0;
+
+
+        quaternions[q] =
+            0;
+
+        quaternions[q + 1] =
+            0;
+
+        quaternions[q + 2] =
+            0;
+
+        quaternions[q + 3] =
+            1;
+
+
+        states[index] =
+            0;
+
+        dirty[index] =
+            0;
+
+        sleepFrames[index] =
+            0;
+
+
+        updateInstanceMatrix(
+            index
+        );
+
+    }
+
+
+    wall.instanceMatrix.needsUpdate =
+        true;
+
+
+    projectile.position.copy(
+        projectileStart
+    );
+
+
+    projectileVelocity.set(
+        0,
+        0,
+        0
+    );
+
+
+    projectileActive =
+        false;
+
+
+    firstImpact =
+        false;
+
+
+    aimMarker.visible =
+        true;
+
+}
+
+
+/* ============================================================
+   CAMERA RESET
+============================================================ */
+
+function resetCamera() {
+
+    targetYaw =
+        0;
+
+    targetPitch =
+        0.12;
+
+    targetDistance =
+        21;
+
+}
+
+
+/* ============================================================
+   CLICK / TAP AIM
+============================================================ */
+
+const raycaster =
+    new THREE.Raycaster();
+
+const pointerNDC =
+    new THREE.Vector2();
+
+
+function aimFromPointer(
+    clientX,
+    clientY
+) {
+
+    const rect =
+        renderer.domElement
+        .getBoundingClientRect();
+
+
+    pointerNDC.x =
+
+        (
+            (
+                clientX -
+                rect.left
+            )
+
+            /
+
+            rect.width
+        )
+
+        *
+
+        2
+
+        -
+
+        1;
+
+
+    pointerNDC.y =
+
+        -(
+
+            (
+                clientY -
+                rect.top
+            )
+
+            /
+
+            rect.height
+
+        )
+
+        *
+
+        2
+
+        +
+
+        1;
+
+
+    raycaster.setFromCamera(
+
+        pointerNDC,
+
+        camera
+
+    );
+
+
+    const hits =
+        raycaster.intersectObject(
+
+            wall,
+
+            false
+
+        );
+
+
+    if (
+        hits.length ===
+        0
+    ) {
+        return;
+    }
+
+
+    const hit =
+        hits[0];
+
+
+    if (
+        hit.instanceId !==
+        undefined
+    ) {
+
+        const index =
+            hit.instanceId;
+
+
+        const p =
+            index * 3;
+
+
+        aimPoint.set(
+
+            positions[p],
+
+            positions[p + 1],
+
+            positions[p + 2]
+
+        );
+
+    }
+
+    else {
+
+        aimPoint.copy(
+            hit.point
+        );
+
+    }
+
+
+    aimMarker.position.copy(
+        hit.point
+    );
+
+
+    aimMarker.visible =
+        true;
+
+}
+
+
+/* ============================================================
+   360° CAMERA CONTROLLER
+============================================================ */
+
+const activePointers =
+    new Map();
+
+
+let cameraGesture =
+    false;
+
+let pointerMoved =
+    false;
+
+let pinchMode =
+    false;
+
+
+let pointerStartX =
+    0;
+
+let pointerStartY =
+    0;
+
+let lastPointerX =
+    0;
+
+let lastPointerY =
+    0;
+
+let lastPinchDistance =
+    0;
+
+
+const MOUSE_ROTATE_SPEED =
+    0.005;
+
+const TOUCH_ROTATE_SPEED =
+    0.006;
+
+const PINCH_ZOOM_SPEED =
+    0.025;
+
+
+/* ============================================================
+   PINCH
+============================================================ */
+
+function getPinchDistance() {
+
+    if (
+        activePointers.size <
+        2
+    ) {
+        return 0;
+    }
+
+
+    const iterator =
+        activePointers.values();
+
+
+    const a =
+        iterator.next().value;
+
+
+    const b =
+        iterator.next().value;
+
+
+    return Math.hypot(
+
+        b.x -
+        a.x,
+
+        b.y -
+        a.y
+
+    );
+
+}
+
+
+/* ============================================================
+   POINTER DOWN
+============================================================ */
+
+renderer.domElement.addEventListener(
+
+    "pointerdown",
+
+    event => {
+
+        event.preventDefault();
+
+
+        activePointers.set(
+
+            event.pointerId,
+
+            {
+                x:
+                    event.clientX,
+
+                y:
+                    event.clientY
+            }
+
+        );
+
+
+        try {
+
+            renderer.domElement
+                .setPointerCapture(
+                    event.pointerId
+                );
+
+        }
+        catch {}
+
+
+        if (
+            activePointers.size ===
+            1
+        ) {
+
+            cameraGesture =
+                true;
+
+            pointerMoved =
+                false;
+
+            pinchMode =
+                false;
+
+
+            pointerStartX =
+                event.clientX;
+
+            pointerStartY =
+                event.clientY;
+
+
+            lastPointerX =
+                event.clientX;
+
+            lastPointerY =
+                event.clientY;
+
+        }
+
+
+        else if (
+            activePointers.size ===
+            2
+        ) {
+
+            pinchMode =
+                true;
+
+            pointerMoved =
+                true;
+
+            cameraGesture =
+                false;
+
+
+            lastPinchDistance =
+                getPinchDistance();
+
+        }
+
+    },
+
+    {
+        passive:
+            false
+    }
+
+);
+
+
+/* ============================================================
+   POINTER MOVE
+============================================================ */
+
+renderer.domElement.addEventListener(
+
+    "pointermove",
+
+    event => {
+
+        if (
+            !activePointers.has(
+                event.pointerId
+            )
+        ) {
+            return;
+        }
+
+
+        event.preventDefault();
+
+
+        activePointers.set(
+
+            event.pointerId,
+
+            {
+                x:
+                    event.clientX,
+
+                y:
+                    event.clientY
+            }
+
+        );
+
+
+        /*
+            PINCH ZOOM
+        */
+
+        if (
+            activePointers.size >=
+            2
+        ) {
+
+            pinchMode =
+                true;
+
+            pointerMoved =
+                true;
+
+
+            const currentDistance =
+                getPinchDistance();
+
+
+            if (
+                lastPinchDistance >
+                0
+            ) {
+
+                const difference =
+
+                    currentDistance
+
+                    -
+
+                    lastPinchDistance;
+
+
+                targetDistance -=
+
+                    difference *
+                    PINCH_ZOOM_SPEED;
+
+
+                targetDistance =
+                    THREE.MathUtils.clamp(
+
+                        targetDistance,
+
+                        MIN_CAMERA_DISTANCE,
+
+                        MAX_CAMERA_DISTANCE
+
+                    );
+
+            }
+
+
+            lastPinchDistance =
+                currentDistance;
+
+
+            return;
+
+        }
+
+
+        /*
+            ONE POINTER ROTATE
+        */
+
+        if (
+            !cameraGesture
+        ) {
+            return;
+        }
+
+
+        const totalMovement =
+            Math.hypot(
+
+                event.clientX -
+                pointerStartX,
+
+                event.clientY -
+                pointerStartY
+
+            );
+
+
+        if (
+            totalMovement >
+            4
+        ) {
+
+            pointerMoved =
+                true;
+
+        }
+
+
+        if (
+            !pointerMoved
+        ) {
+            return;
+        }
+
+
+        const dx =
+
+            event.clientX -
+            lastPointerX;
+
+
+        const dy =
+
+            event.clientY -
+            lastPointerY;
+
+
+        const speed =
+
+            event.pointerType ===
+            "touch"
+
+                ? TOUCH_ROTATE_SPEED
+
+                : MOUSE_ROTATE_SPEED;
+
+
+        /*
+            Horizontal:
+            unlimited 360°.
+        */
+
+        targetYaw -=
+
+            dx *
+            speed;
+
+
+        /*
+            Keep values numerically small without
+            limiting rotation.
+        */
+
+        if (
+            targetYaw >
+            Math.PI * 4
+        ) {
+
+            targetYaw -=
+                Math.PI * 2;
+
+            cameraYaw -=
+                Math.PI * 2;
+
+        }
+
+        else if (
+            targetYaw <
+            -Math.PI * 4
+        ) {
+
+            targetYaw +=
+                Math.PI * 2;
+
+            cameraYaw +=
+                Math.PI * 2;
+
+        }
+
+
+        /*
+            Vertical orbit.
+        */
+
+        targetPitch +=
+
+            dy *
+            speed;
+
+
+        targetPitch =
+            THREE.MathUtils.clamp(
+
+                targetPitch,
+
+                -MAX_CAMERA_PITCH,
+
+                MAX_CAMERA_PITCH
+
+            );
+
+
+        lastPointerX =
+            event.clientX;
+
+        lastPointerY =
+            event.clientY;
+
+    },
+
+    {
+        passive:
+            false
+    }
+
+);
+
+
+/* ============================================================
+   POINTER END
+============================================================ */
+
+function finishPointer(
+    event
+) {
+
+    const wasSingle =
+        activePointers.size ===
+        1;
+
+
+    const shouldAim =
+
+        wasSingle &&
+
+        !pointerMoved &&
+
+        !pinchMode;
+
+
+    activePointers.delete(
+        event.pointerId
+    );
+
+
+    if (
+        shouldAim
+    ) {
+
+        aimFromPointer(
+
+            event.clientX,
+
+            event.clientY
+
+        );
+
+    }
+
+
+    if (
+        activePointers.size ===
+        0
+    ) {
+
+        cameraGesture =
+            false;
+
+        pointerMoved =
+            false;
+
+        pinchMode =
+            false;
+
+        lastPinchDistance =
+            0;
+
+    }
+
+
+    else if (
+        activePointers.size ===
+        1
+    ) {
+
+        const remaining =
+
+            activePointers
+                .values()
+                .next()
+                .value;
+
+
+        pointerStartX =
+            remaining.x;
+
+        pointerStartY =
+            remaining.y;
+
+
+        lastPointerX =
+            remaining.x;
+
+        lastPointerY =
+            remaining.y;
+
+
+        pointerMoved =
+            true;
+
+        pinchMode =
+            false;
+
+        cameraGesture =
+            true;
+
+    }
+
+}
+
+
+renderer.domElement.addEventListener(
+    "pointerup",
+    finishPointer
+);
+
+
+renderer.domElement.addEventListener(
+    "pointercancel",
+    finishPointer
+);
+
+
+/* ============================================================
+   MOUSE WHEEL ZOOM
+============================================================ */
+
+renderer.domElement.addEventListener(
+
+    "wheel",
+
+    event => {
+
+        event.preventDefault();
+
+
+        const zoomFactor =
+
+            Math.exp(
+
+                event.deltaY *
+                0.001
+
+            );
+
+
+        targetDistance *=
+            zoomFactor;
+
+
+        targetDistance =
+            THREE.MathUtils.clamp(
+
+                targetDistance,
+
+                MIN_CAMERA_DISTANCE,
+
+                MAX_CAMERA_DISTANCE
+
+            );
+
+    },
+
+    {
+        passive:
+            false
+    }
+
+);
+
+
+/* ============================================================
+   BUTTONS
+============================================================ */
+
+launchButton.addEventListener(
+    "click",
+    requestLaunch
+);
+
+
+resetButton.addEventListener(
+    "click",
+    resetWall
+);
+
+
+resetCameraButton.addEventListener(
+    "click",
+    resetCamera
+);
+
+
+/* ============================================================
+   RECORDING
+============================================================ */
+
+let mediaRecorder =
+    null;
+
+let recordingChunks =
+    [];
+
+let recordingStream =
+    null;
+
+let recordingStartedAt =
+    0;
+
+let timerInterval =
+    null;
+
+let screenWakeLock =
+    null;
+
+
+/* ============================================================
+   RECORD FORMAT
+============================================================ */
+
+function getSupportedRecordingType() {
+
+    if (
+        typeof MediaRecorder ===
+        "undefined"
+    ) {
+        return "";
+    }
+
+
+    const types = [
+
+        "video/mp4;codecs=avc1.42E01E",
+
+        "video/mp4",
+
+        "video/webm;codecs=vp9",
+
+        "video/webm;codecs=vp8",
+
+        "video/webm"
+
+    ];
+
+
+    for (
+        const type of types
+    ) {
+
+        if (
+            MediaRecorder
+                .isTypeSupported(
+                    type
+                )
+        ) {
+
+            return type;
+
+        }
+
+    }
+
+
+    return "";
+
+}
+
+
+/* ============================================================
+   RECORD TIMER
+============================================================ */
+
+function updateRecordTimer() {
+
+    const totalSeconds =
+
+        Math.floor(
+
+            (
+                performance.now() -
+                recordingStartedAt
+            )
+
+            /
+
+            1000
+
+        );
+
+
+    const minutes =
+        Math.floor(
+            totalSeconds /
+            60
+        );
+
+
+    const seconds =
+        totalSeconds %
+        60;
+
+
+    recordTimer.textContent =
+
+        String(
+            minutes
+        )
+        .padStart(
+            2,
+            "0"
+        )
+
+        +
+
+        ":"
+
+        +
+
+        String(
+            seconds
+        )
+        .padStart(
+            2,
+            "0"
+        );
+
+}
+
+
+/* ============================================================
+   START RECORD
+============================================================ */
+
+async function startRecording() {
+
+    if (
+        isRecording
+    ) {
+        return;
+    }
+
+
+    const canvas =
+        renderer.domElement;
+
+
+    if (
+        typeof canvas.captureStream !==
+        "function" ||
+
+        typeof MediaRecorder ===
+        "undefined"
+    ) {
+
+        alert(
+            "Video recording is not supported by this browser."
+        );
+
+        return;
+
+    }
+
+
+    isRecording =
+        true;
+
+
+    /*
+        Actual recording buffer:
+        1080 × 1920.
+    */
+
+    renderer.setPixelRatio(
+        1
+    );
+
+
+    renderer.setSize(
+
+        RECORD_WIDTH,
+
+        RECORD_HEIGHT,
+
+        false
+
+    );
+
+
+    renderer.render(
+        scene,
+        camera
+    );
+
+
+    recordingStream =
+        canvas.captureStream(
+            RECORD_FPS
+        );
+
+
+    const mimeType =
+        getSupportedRecordingType();
+
+
+    const options = {
+
+        videoBitsPerSecond:
+            RECORD_BITRATE
+
+    };
+
+
+    if (
+        mimeType
+    ) {
+
+        options.mimeType =
+            mimeType;
+
+    }
+
+
+    try {
+
+        mediaRecorder =
+            new MediaRecorder(
+
+                recordingStream,
+
+                options
+
+            );
+
+    }
+
+    catch (
+        error
+    ) {
+
+        console.error(
+            error
+        );
+
+
+        isRecording =
+            false;
+
+
+        resizeRenderer();
+
+
+        alert(
+            "Could not start the recorder."
+        );
+
+
+        return;
+
+    }
+
+
+    recordingChunks =
+        [];
+
+
+    mediaRecorder.ondataavailable =
+        event => {
+
+            if (
+                event.data &&
+                event.data.size >
+                0
+            ) {
+
+                recordingChunks.push(
+                    event.data
+                );
+
+            }
+
+        };
+
+
+    mediaRecorder.onstop =
+        saveRecording;
+
+
+    try {
+
+        if (
+            "wakeLock" in navigator
+        ) {
+
+            screenWakeLock =
+
+                await navigator
+                    .wakeLock
+                    .request(
+                        "screen"
+                    );
+
+        }
+
+    }
+
+    catch {}
+
+
+    mediaRecorder.start(
+        1000
+    );
+
+
+    recordingStartedAt =
+        performance.now();
+
+
+    recordButton
+        .classList
+        .add(
+            "recording"
+        );
+
+
+    recordText.textContent =
+        "STOP & SAVE";
+
+
+    updateRecordTimer();
+
+
+    timerInterval =
+        setInterval(
+
+            updateRecordTimer,
+
+            500
+
+        );
+
+}
+
+
+/* ============================================================
+   STOP RECORD
+============================================================ */
+
+function stopRecording() {
+
+    if (
+        !isRecording
+    ) {
+        return;
+    }
+
+
+    if (
+        mediaRecorder &&
+        mediaRecorder.state !==
+        "inactive"
+    ) {
+
+        mediaRecorder.stop();
+
+    }
+
+
+    clearInterval(
+        timerInterval
+    );
+
+
+    recordButton
+        .classList
+        .remove(
+            "recording"
+        );
+
+
+    recordText.textContent =
+        "START RECORD";
+
+}
+
+
+/* ============================================================
+   SAVE
+============================================================ */
+
+async function saveRecording() {
+
+    const mimeType =
+
+        mediaRecorder?.mimeType
+
+        ||
+
+        getSupportedRecordingType()
+
+        ||
+
+        "video/webm";
+
+
+    const extension =
+
+        mimeType.includes(
+            "mp4"
+        )
+
+            ? "mp4"
+
+            : "webm";
+
+
+    const blob =
+        new Blob(
+
+            recordingChunks,
+
+            {
+                type:
+                    mimeType
+            }
+
+        );
+
+
+    const url =
+        URL.createObjectURL(
+            blob
+        );
+
+
+    const link =
+        document.createElement(
+            "a"
+        );
+
+
+    link.href =
+        url;
+
+
+    link.download =
+
+        "real-speed-destruction-"
+
+        +
+
+        Date.now()
+
+        +
+
+        "."
+
+        +
+
+        extension;
+
+
+    document.body.appendChild(
+        link
+    );
+
+
+    link.click();
+
+
+    link.remove();
+
+
+    setTimeout(
+
+        () => {
+
+            URL.revokeObjectURL(
+                url
+            );
+
+        },
+
+        5000
+
+    );
+
+
+    if (
+        recordingStream
+    ) {
+
+        recordingStream
+            .getTracks()
+            .forEach(
+                track => track.stop()
+            );
+
+    }
+
+
+    recordingStream =
+        null;
+
+
+    recordingChunks =
+        [];
+
+
+    if (
+        screenWakeLock
+    ) {
+
+        try {
+
+            await screenWakeLock.release();
+
+        }
+
+        catch {}
+
+
+        screenWakeLock =
+            null;
+
+    }
+
+
+    isRecording =
+        false;
+
+
+    recordTimer.textContent =
+        "00:00";
+
+
+    resizeRenderer();
+
+}
+
+
+/* ============================================================
+   RECORD BUTTON
+============================================================ */
+
+recordButton.addEventListener(
+
+    "click",
+
+    () => {
+
+        if (
+            isRecording
+        ) {
+
+            stopRecording();
+
+        }
+
+        else {
+
+            startRecording();
+
+        }
+
+    }
+
+);
+
+
+/* ============================================================
+   KEYBOARD
+============================================================ */
+
+window.addEventListener(
+
+    "keydown",
+
+    event => {
+
+        if (
+            event.code ===
+            "Space"
+        ) {
+
+            event.preventDefault();
+
+            requestLaunch();
+
+        }
+
+
+        else if (
+            event.code ===
+            "KeyR"
+        ) {
+
+            resetWall();
+
+        }
+
+
+        else if (
+            event.code ===
+            "KeyC"
+        ) {
+
+            resetCamera();
+
+        }
+
+    }
+
+);
+
+
+/* ============================================================
+   RESIZE
+============================================================ */
+
+const resizeObserver =
+    new ResizeObserver(
+        resizeRenderer
+    );
+
+
+resizeObserver.observe(
+    animationFrame
+);
+
+
+window.addEventListener(
+    "resize",
+    resizeRenderer
+);
+
+
+/* ============================================================
+   FPS
+============================================================ */
+
+let fpsFrames =
+    0;
+
+let previousFPSTime =
+    performance.now();
+
+
+function updateFPS(
+    now
+) {
+
+    fpsFrames++;
+
+
+    const elapsed =
+        now -
+        previousFPSTime;
+
+
+    if (
+        elapsed >=
+        600
+    ) {
+
+        fpsElement.textContent =
+
+            Math.round(
+
+                fpsFrames *
+                1000 /
+                elapsed
+
+            );
+
+
+        dynamicCountElement.textContent =
+            activeCount;
+
+
+        fpsFrames =
+            0;
+
+
+        previousFPSTime =
+            now;
+
+    }
+
+}
+
+
+/* ============================================================
+   MAIN LOOP
+============================================================ */
+
+let previousTime =
+    performance.now();
+
+let accumulator =
+    0;
+
+let previousRecordedRender =
+    0;
+
+
+function animate(
+    now
+) {
+
+    const delta =
+
+        Math.min(
+
+            (
+                now -
+                previousTime
+            )
+
+            /
+
+            1000,
+
+            0.035
+
+        );
+
+
+    previousTime =
+        now;
+
+
+    accumulator +=
+        delta;
+
+
+    /*
+        Fixed physics.
+    */
+
+    let substeps =
+        0;
+
+
+    while (
+        accumulator >=
+        FIXED_STEP &&
+
+        substeps <
+        2
+    ) {
+
+        physicsStep(
+            FIXED_STEP
+        );
+
+
+        accumulator -=
+            FIXED_STEP;
+
+
+        substeps++;
+
+    }
+
+
+    if (
+        accumulator >
+        FIXED_STEP *
+        2
+    ) {
+
+        accumulator =
+            0;
+
+    }
+
+
+    syncInstanceMatrices();
+
+
+    /*
+        Launch countdown.
+    */
+
+    updateLaunchSequence(
+        now
+    );
+
+
+    /*
+        3D speed text.
+    */
+
+    updateSpeedText(
+        now
+    );
+
+
+    /*
+        Smooth 360 camera.
+    */
+
+    cameraYaw +=
+
+        (
+            targetYaw -
+            cameraYaw
+        )
+
+        *
+        0.16;
+
+
+    cameraPitch +=
+
+        (
+            targetPitch -
+            cameraPitch
+        )
+
+        *
+        0.16;
+
+
+    cameraDistance +=
+
+        (
+            targetDistance -
+            cameraDistance
+        )
+
+        *
+        0.14;
+
+
+    updateCamera();
+
+
+    /*
+        Speed text must billboard after camera update.
+    */
+
+    if (
+        speedTextMesh.visible
+    ) {
+
+        speedTextMesh.lookAt(
+            camera.position
+        );
+
+    }
+
+
+    updateFPS(
+        now
+    );
+
+
+    /*
+        1080×1920 recording at ~30 FPS,
+        while physics stays at 60 Hz.
+    */
+
+    if (
+        isRecording
+    ) {
+
+        if (
+            now -
+            previousRecordedRender
+
+            <
+
+            1000 /
+            RECORD_FPS
+        ) {
+
+            return;
+
+        }
+
+
+        previousRecordedRender =
+            now;
+
+    }
+
+
+    renderer.render(
+        scene,
+        camera
+    );
+
+}
+
+
+/* ============================================================
+   START
+============================================================ */
+
+renderer.setAnimationLoop(
+    animate
+);
+
+
+setTimeout(
+
+    () => {
+
+        loadingElement
+            .classList
+            .add(
+                "hide"
+            );
+
+    },
+
+    300
+
+);
+
+</script>
+
+</body>
+</html>
